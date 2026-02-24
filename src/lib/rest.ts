@@ -1,4 +1,4 @@
-const WP_URL = process.env.NEXT_PUBLIC_WORDPRESS_URL || 'https://bootflare.com';
+const WP_URL = 'https://bootflare.com';
 
 export async function fetchREST(endpoint: string, retries = 10, namespace = 'wp/v2') {
     const separator = endpoint.includes('?') ? '&' : '?';

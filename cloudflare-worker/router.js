@@ -47,9 +47,16 @@ export default {
 
         if (isWordPressPath) {
             // ── WordPress: pass through to shared hosting origin ──
-            // The A record for bootflare.com still points to shared hosting,
-            // so Cloudflare will forward this directly to your origin server.
-            return fetch(request);
+            // Using resolveOverride to bypass Cloudflare DNS and route directly to 
+            // the shared hosting IP. This breaks the infinite routing loop caused
+            // by the Worker calling fetch('https://bootflare.com/...')
+            // 185.91.127.12 is the raw IP for bootflare.com's shared host.
+            const newRequest = new Request(request.url, request);
+            return fetch(newRequest, {
+                cf: {
+                    resolveOverride: '185.91.127.12'
+                }
+            });
         }
 
         // ── Next.js: forward to Cloudflare Pages ──────────────────────────
