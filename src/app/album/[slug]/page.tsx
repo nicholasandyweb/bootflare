@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { fetchREST } from '@/lib/rest';
 import Link from 'next/link';
 import { ChevronLeft, Play, Music, Headphones, Share2, Sparkles, Clock, Calendar, Download } from 'lucide-react';

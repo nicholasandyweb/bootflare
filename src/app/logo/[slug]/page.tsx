@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { fetchREST } from '@/lib/rest';
 import Link from 'next/link';
 import { Download, ChevronLeft, Flag, ExternalLink } from 'lucide-react';

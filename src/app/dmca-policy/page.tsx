@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { fetchGraphQL } from '@/lib/graphql';
 import { fetchRankMathSEO, mapRankMathToMetadata } from '@/lib/seo';
 import { Metadata } from 'next';

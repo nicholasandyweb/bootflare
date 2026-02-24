@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { fetchGraphQL } from '@/lib/graphql';
 import { stripScripts, stripUnwantedTerms } from '@/lib/sanitize';
 import { Sparkles, CheckCircle2, Award, Users, Globe } from 'lucide-react';

@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { fetchGraphQL } from '@/lib/graphql';
 import ContactForm from '@/components/ContactForm';
 
