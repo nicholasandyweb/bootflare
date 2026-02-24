@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { Metadata } from 'next';
 import { mapWPToMetadata } from '@/lib/seo';
 
-export const runtime = 'edge';
 export const dynamicParams = true;
 
 const GET_SINGLE_POST = `

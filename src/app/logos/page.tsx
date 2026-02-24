@@ -8,7 +8,6 @@ import LogoCard from '@/components/LogoCard';
 import CategoryList from '@/components/CategoryList';
 import Pagination from '@/components/Pagination';
 
-export const runtime = 'edge';
 
 export async function generateMetadata({ searchParams }: { searchParams: Promise<{ s?: string }> }): Promise<Metadata> {
   const params = await searchParams;

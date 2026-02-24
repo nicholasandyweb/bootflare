@@ -9,7 +9,6 @@ import CategoryList from '@/components/CategoryList';
 import { Metadata } from 'next';
 
 // Rendered on-demand via Cloudflare's edge network on every request.
-export const runtime = 'edge';
 export const dynamicParams = true;
 
 interface Logo {

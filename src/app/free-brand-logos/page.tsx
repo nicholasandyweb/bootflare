@@ -10,7 +10,6 @@ import Pagination from '@/components/Pagination';
 import { Metadata } from 'next';
 import { decodeEntities } from '@/lib/sanitize';
 
-export const runtime = 'edge';
 
 
 export async function generateMetadata(): Promise<Metadata> {
