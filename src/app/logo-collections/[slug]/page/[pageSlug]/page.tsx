@@ -21,9 +21,6 @@ interface Logo {
     };
 }
 
-export async function generateStaticParams() {
-    return [];
-}
 
 export default async function LogoCollectionPaginated({ params }: { params: Promise<{ slug: string, pageSlug: string }> }) {
     const { slug, pageSlug } = await params;

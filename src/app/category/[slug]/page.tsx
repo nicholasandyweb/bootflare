@@ -81,9 +81,6 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     return { title: 'Category Not Found | Bootflare' };
 }
 
-export async function generateStaticParams() {
-    return [];
-}
 
 export default async function CategoryPage({ params }: { params: Promise<{ slug: string }> }) {
     const { slug } = await params;

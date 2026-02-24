@@ -21,10 +21,6 @@ interface Logo {
     };
 }
 
-// Don't pre-build at build time — render on-demand (ISR) to avoid overloading WordPress.
-export async function generateStaticParams() {
-    return [];
-}
 
 export default async function LogoCollectionPage({ params }: { params: Promise<{ slug: string }> }) {
     const { slug } = await params;

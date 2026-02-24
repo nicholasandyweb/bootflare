@@ -60,12 +60,6 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     return { title: 'Logo Not Found | Bootflare' };
 }
 
-// Don't pre-build any logo pages at build time — they are rendered on-demand (ISR).
-// This prevents hundreds of parallel WordPress REST API calls during the build
-// which caused 503 errors on shared hosting.
-export async function generateStaticParams() {
-    return [];
-}
 
 async function getRelatedLogos(logo: Logo) {
     try {

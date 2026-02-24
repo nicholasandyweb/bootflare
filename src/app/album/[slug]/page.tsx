@@ -44,10 +44,6 @@ interface Album {
     };
 }
 
-export async function generateStaticParams() {
-    return [];
-}
-
 export default async function SingleMusic({ params, searchParams }: { params: Promise<{ slug: string }>, searchParams: Promise<{ page?: string }> }) {
     const { slug } = await params;
     const { page } = await searchParams;
