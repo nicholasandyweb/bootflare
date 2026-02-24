@@ -1,5 +1,7 @@
 import { Metadata } from 'next';
 
+const WP_URL = 'https://bootflare.com';
+
 interface WPPost {
     title?: { rendered: string } | string;
     excerpt?: { rendered: string } | string;
@@ -29,6 +31,68 @@ interface WPPost {
             sourceUrl: string;
         };
     };
+}
+
+interface RankMathSEO {
+    title?: string;
+    description?: string;
+    ogTitle?: string;
+    ogDescription?: string;
+    ogImage?: string;
+    twitterTitle?: string;
+    twitterDescription?: string;
+    twitterImage?: string;
+}
+
+function extractMeta(head: string, name: string): string | undefined {
+    // Matches both name= and property= meta tags
+    const regex = new RegExp(
+        `<meta[^>]+(?:name|property)=["']${name}["'][^>]+content=["']([^"']+)["']`,
+        'i'
+    );
+    const reversed = new RegExp(
+        `<meta[^>]+content=["']([^"']+)["'][^>]+(?:name|property)=["']${name}["']`,
+        'i'
+    );
+    const m = head.match(regex) || head.match(reversed);
+    return m?.[1] || undefined;
+}
+
+function extractTitle(head: string): string | undefined {
+    const m = head.match(/<title>([\s\S]*?)<\/title>/i);
+    return m?.[1]?.trim() || undefined;
+}
+
+/**
+ * Fetches fully-rendered SEO tags from RankMath for a given post URL.
+ * Uses the /wp-json/rankmath/v1/getHead endpoint.
+ */
+export async function fetchRankMathSEO(postUrl: string): Promise<RankMathSEO | null> {
+    try {
+        const apiUrl = `${WP_URL}/wp-json/rankmath/v1/getHead?url=${encodeURIComponent(postUrl)}`;
+        const res = await fetch(apiUrl, {
+            next: { revalidate: 60 }, // Cache for 1 minute
+        });
+        if (!res.ok) return null;
+
+        const data = await res.json();
+        if (!data?.success || !data?.head) return null;
+
+        const head: string = data.head;
+
+        return {
+            title: extractTitle(head),
+            description: extractMeta(head, 'description'),
+            ogTitle: extractMeta(head, 'og:title'),
+            ogDescription: extractMeta(head, 'og:description'),
+            ogImage: extractMeta(head, 'og:image'),
+            twitterTitle: extractMeta(head, 'twitter:title'),
+            twitterDescription: extractMeta(head, 'twitter:description'),
+            twitterImage: extractMeta(head, 'twitter:image'),
+        };
+    } catch {
+        return null;
+    }
 }
 
 export function mapWPToMetadata(post: WPPost, defaultTitle: string = 'Bootflare'): Metadata {
@@ -78,5 +142,33 @@ export function mapWPToMetadata(post: WPPost, defaultTitle: string = 'Bootflare'
             description: post.seo?.twitterDescription || ogDesc,
             images: post.seo?.twitterImage?.sourceUrl || ogImage ? [post.seo?.twitterImage?.sourceUrl || ogImage] : [],
         }
+    };
+}
+
+/**
+ * Converts RankMath SEO data directly into Next.js Metadata.
+ * Used when the WP REST API doesn't expose a `seo` field (e.g. custom CPTs).
+ */
+export function mapRankMathToMetadata(seo: RankMathSEO, fallbackTitle?: string): Metadata {
+    const title = seo.title || fallbackTitle || 'Bootflare';
+    const description = seo.description || '';
+    const ogTitle = seo.ogTitle || title;
+    const ogDesc = seo.ogDescription || description;
+
+    return {
+        title,
+        description,
+        openGraph: {
+            title: ogTitle,
+            description: ogDesc,
+            images: seo.ogImage ? [{ url: seo.ogImage }] : [],
+            type: 'article',
+        },
+        twitter: {
+            card: 'summary_large_image',
+            title: seo.twitterTitle || ogTitle,
+            description: seo.twitterDescription || ogDesc,
+            images: seo.twitterImage ? [seo.twitterImage] : (seo.ogImage ? [seo.ogImage] : []),
+        },
     };
 }

@@ -1,0 +1,92 @@
+﻿{
+  category: {
+    name: 'Categories',
+    slug: 'category',
+    description: '',
+    types: [ 'post' ],
+    hierarchical: true,
+    rest_base: 'categories',
+    rest_namespace: 'wp/v2',
+    _links: { collection: [Array], 'wp:items': [Array], curies: [Array] }
+  },
+  post_tag: {
+    name: 'Tags',
+    slug: 'post_tag',
+    description: '',
+    types: [ 'post' ],
+    hierarchical: false,
+    rest_base: 'tags',
+    rest_namespace: 'wp/v2',
+    _links: { collection: [Array], 'wp:items': [Array], curies: [Array] }
+  },
+  nav_menu: {
+    name: 'Navigation Menus',
+    slug: 'nav_menu',
+    description: '',
+    types: [ 'nav_menu_item' ],
+    hierarchical: false,
+    rest_base: 'menus',
+    rest_namespace: 'wp/v2',
+    _links: { collection: [Array], 'wp:items': [Array], curies: [Array] }
+  },
+  wp_pattern_category: {
+    name: 'Pattern Categories',
+    slug: 'wp_pattern_category',
+    description: '',
+    types: [ 'wp_block' ],
+    hierarchical: false,
+    rest_base: 'wp_pattern_category',
+    rest_namespace: 'wp/v2',
+    _links: { collection: [Array], 'wp:items': [Array], curies: [Array] }
+  },
+  'logo-collection': {
+    name: 'Logo Collection',
+    slug: 'logo-collection',
+    description: '',
+    types: [ 'logo', 'wpdmpro' ],
+    hierarchical: false,
+    rest_base: 'logo-collection',
+    rest_namespace: 'wp/v2',
+    _links: { collection: [Array], 'wp:items': [Array], curies: [Array] }
+  },
+  logos: {
+    name: 'Logo Categories',
+    slug: 'logos',
+    description: '',
+    types: [ 'logo', 'wpdmpro' ],
+    hierarchical: true,
+    rest_base: 'logos',
+    rest_namespace: 'wp/v2',
+    _links: { collection: [Array], 'wp:items': [Array], curies: [Array] }
+  },
+  'playlist-category': {
+    name: 'Categories',
+    slug: 'playlist-category',
+    description: '',
+    types: [ 'sr_playlist' ],
+    hierarchical: true,
+    rest_base: 'playlist-category',
+    rest_namespace: 'wp/v2',
+    _links: { collection: [Array], 'wp:items': [Array], curies: [Array] }
+  },
+  'playlist-tag': {
+    name: 'Tags',
+    slug: 'playlist-tag',
+    description: '',
+    types: [ 'sr_playlist' ],
+    hierarchical: true,
+    rest_base: 'playlist-tag',
+    rest_namespace: 'wp/v2',
+    _links: { collection: [Array], 'wp:items': [Array], curies: [Array] }
+  },
+  rank_math_redirection_category: {
+    name: 'Redirection Categories',
+    slug: 'rank_math_redirection_category',
+    description: '',
+    types: [ 'rank_math_redirection' ],
+    hierarchical: true,
+    rest_base: 'rank_math_redirection_category',
+    rest_namespace: 'wp/v2',
+    _links: { collection: [Array], 'wp:items': [Array], curies: [Array] }
+  }
+}

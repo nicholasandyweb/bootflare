@@ -1,7 +1,16 @@
 import { fetchGraphQL } from '@/lib/graphql';
-import { stripScripts } from '@/lib/sanitize';
+import { stripScripts, stripUnwantedTerms } from '@/lib/sanitize';
 import { Sparkles, CheckCircle2, Award, Users, Globe } from 'lucide-react';
 import Image from 'next/image';
+import { fetchRankMathSEO, mapRankMathToMetadata } from '@/lib/seo';
+import { Metadata } from 'next';
+
+export async function generateMetadata(): Promise<Metadata> {
+    const seo = await fetchRankMathSEO('https://bootflare.com/about-us/');
+    if (seo) return mapRankMathToMetadata(seo);
+    return { title: 'About Us | Bootflare' };
+}
+
 
 const GET_ABOUT_PAGE = `
   query GetAboutPage {
@@ -50,7 +59,7 @@ export default async function AboutPage() {
         );
     }
 
-    const sanitizedContent = stripScripts(page.content);
+    const sanitizedContent = stripUnwantedTerms(stripScripts(page.content));
 
     return (
         <div className="bg-white min-h-screen pb-32" suppressHydrationWarning>
@@ -83,7 +92,13 @@ export default async function AboutPage() {
                     {/* Main Content */}
                     <div className="lg:col-span-2">
                         <div
-                            className="prose prose-slate prose-2xl max-w-none text-slate-700 leading-relaxed font-light article-content about-content"
+                            className="prose prose-slate prose-2xl max-w-none text-slate-700 leading-relaxed font-light article-content about-content
+                                [&_p]:mb-10 [&_p:last-child]:mb-0
+                                [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:mb-8 [&_ul]:space-y-3
+                                [&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:mb-8 [&_ol]:space-y-3
+                                [&_li]:mb-2
+                                [&_h2]:text-3xl [&_h2]:font-bold [&_h2]:mt-16 [&_h2]:mb-8 [&_h2]:text-slate-900
+                                [&_h3]:text-2xl [&_h3]:font-bold [&_h3]:mt-12 [&_h3]:mb-6 [&_h3]:text-slate-900"
                             dangerouslySetInnerHTML={{ __html: sanitizedContent }}
                             suppressHydrationWarning
                         />

@@ -8,7 +8,7 @@ export const client = new GraphQLClient(endpoint, {
   },
 });
 
-export async function fetchGraphQL<T>(query: string, variables?: Record<string, any>): Promise<T> {
+export async function fetchGraphQL<T>(query: string, variables?: Record<string, unknown>): Promise<T> {
   const res = await fetch(endpoint, {
     method: 'POST',
     headers: {

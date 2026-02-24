@@ -1,8 +1,9 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { fetchGraphQL } from './graphql';
 import * as fs from 'fs';
 
 async function introspect() {
-    const query = `
+  const query = `
     query GetAllTypes {
       __schema {
         types {
@@ -12,17 +13,17 @@ async function introspect() {
       }
     }
   `;
-    try {
-        const data: any = await fetchGraphQL(query);
-        const types = data.__schema.types.map((t: any) => t.name).sort();
+  try {
+    const data: any = await fetchGraphQL(query);
+    const types = data.__schema.types.map((t: any) => t.name).sort();
 
-        const relevantTypes = types.filter((n: string) => /logo|music|playlist|track|sr_/i.test(n));
-        console.log("Relevant Types found in schema:", relevantTypes);
-        fs.writeFileSync('relevant_types.json', JSON.stringify(relevantTypes, null, 2));
+    const relevantTypes = types.filter((n: string) => /logo|music|playlist|track|sr_/i.test(n));
+    console.log("Relevant Types found in schema:", relevantTypes);
+    fs.writeFileSync('relevant_types.json', JSON.stringify(relevantTypes, null, 2));
 
-    } catch (error: any) {
-        console.error('Introspection failed.');
-    }
+  } catch (error: any) {
+    console.error('Introspection failed.');
+  }
 }
 
 introspect();

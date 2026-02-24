@@ -1,0 +1,59 @@
+﻿
+> bootflare@0.1.0 pages:build
+> npx @cloudflare/next-on-pages
+
+ΓÜí∩╕Å @cloudflare/next-on-pages CLI v.1.13.16
+node.exe : 
+At C:\Program Files\no
+dejs\npm.ps1:29 char:3
++   & $NODE_EXE 
+$NPM_CLI_JS $args
++   ~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~
+    + CategoryInfo    
+          : NotSpeci  
+  fied: (:String) [   
+ ], RemoteExceptio    
+n
+    + FullyQualifiedE 
+   rrorId : NativeCo  
+  mmandError
+ 
+ΓÜí∩╕Å Warning: It 
+seems like you're on 
+a Windows system, the 
+Vercel CLI (run by @cl
+oudflare/next-on-pages
+ΓÜí∩╕Å to build your 
+application) seems 
+not to work reliably 
+on Windows so if you 
+experience issues 
+during
+ΓÜí∩╕Å the build 
+process please try 
+switching to a 
+different operating 
+system or running
+ΓÜí∩╕Å @cloudflare/nex
+t-on-pages under the 
+Windows Subsystem for 
+Linux
+
+EXIT WHEN NOT EXPECTED
+
+SHELLAC COMMAND FAILED!
+Executing: npm --version in C:\Users\user\Desktop\bootflare
+
+STDOUT:
+
+
+
+STDERR:
+
+
+
+ΓÜí∩╕Å Unexpected 
+error: {"cmd":"npm --v
+ersion","stdout":"","s
+tderr":""}

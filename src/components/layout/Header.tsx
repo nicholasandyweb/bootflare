@@ -2,23 +2,14 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Menu, X, ChevronDown } from 'lucide-react';
 
 const Header = () => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
-    const [scrolled, setScrolled] = useState(false);
-
-    useEffect(() => {
-        const handleScroll = () => {
-            setScrolled(window.scrollY > 20);
-        };
-        window.addEventListener('scroll', handleScroll);
-        return () => window.removeEventListener('scroll', handleScroll);
-    }, []);
 
     return (
-        <header className={`fixed top-0 left-0 w-full z-50 transition-all duration-300 ${scrolled ? 'py-3 glass shadow-lg' : 'py-5 bg-white'}`}>
+        <header className="fixed top-0 left-0 w-full z-50 bg-white py-4 border-b border-slate-100">
             <div className="container flex justify-between items-center">
                 <Link href="/" className="flex items-center gap-2">
                     <Image
@@ -37,17 +28,17 @@ const Header = () => {
 
                     <div className="group relative">
                         <button className="flex items-center gap-1 font-semibold text-slate-600 hover:text-primary transition-colors py-2">
-                            Digital Goods <ChevronDown className="w-4 h-4" />
+                            Downloads <ChevronDown className="w-4 h-4" />
                         </button>
                         <div className="absolute hidden group-hover:block top-full left-0 bg-white shadow-2xl rounded-2xl p-3 min-w-[220px] border border-slate-100 animate-in fade-in slide-in-from-top-2">
-                            <Link href="/logos" className="block px-4 py-2.5 hover:bg-slate-50 hover:text-primary rounded-xl transition-colors font-medium text-slate-700">Free Brand Logos</Link>
+                            <Link href="/free-brand-logos" className="block px-4 py-2.5 hover:bg-slate-50 hover:text-primary rounded-xl transition-colors font-medium text-slate-700">Free Brand Logos</Link>
                             <Link href="/royalty-free-music" className="block px-4 py-2.5 hover:bg-slate-50 hover:text-primary rounded-xl transition-colors font-medium text-slate-700">Royalty Free Music</Link>
                         </div>
                     </div>
 
                     <div className="group relative">
                         <Link href="/blog" className="flex items-center gap-1 font-semibold text-slate-600 hover:text-primary transition-colors py-2">
-                            Knowledge <ChevronDown className="w-4 h-4" />
+                            Blog <ChevronDown className="w-4 h-4" />
                         </Link>
                         <div className="absolute hidden group-hover:block top-full left-0 bg-white shadow-2xl rounded-2xl p-3 min-w-[180px] border border-slate-100 animate-in fade-in slide-in-from-top-2">
                             <Link href="/category/general" className="block px-4 py-2.5 hover:bg-slate-50 hover:text-primary rounded-xl transition-colors font-medium text-slate-700">General</Link>
@@ -58,10 +49,6 @@ const Header = () => {
                     </div>
 
                     <Link href="/faq" className="font-semibold text-slate-600 hover:text-primary transition-colors">FAQ</Link>
-
-                    <Link href="/contact" className="ml-4 btn-premium !py-2 !px-6 text-sm">
-                        Get Started
-                    </Link>
                 </nav>
 
                 <button
@@ -76,11 +63,10 @@ const Header = () => {
             {isMenuOpen && (
                 <div className="lg:hidden absolute top-full left-0 w-full bg-white border-b border-slate-100 p-6 flex flex-col gap-4 animate-in slide-in-from-top duration-300">
                     <Link href="/" className="font-bold text-primary text-lg" onClick={() => setIsMenuOpen(false)}>Home</Link>
-                    <Link href="/logos" className="font-semibold text-slate-700 text-lg" onClick={() => setIsMenuOpen(false)}>Free Brand Logos</Link>
+                    <Link href="/free-brand-logos" className="font-semibold text-slate-700 text-lg" onClick={() => setIsMenuOpen(false)}>Free Brand Logos</Link>
                     <Link href="/royalty-free-music" className="font-semibold text-slate-700 text-lg" onClick={() => setIsMenuOpen(false)}>Royalty Free Music</Link>
                     <Link href="/blog" className="font-semibold text-slate-700 text-lg" onClick={() => setIsMenuOpen(false)}>Blog</Link>
                     <Link href="/faq" className="font-semibold text-slate-700 text-lg" onClick={() => setIsMenuOpen(false)}>FAQ</Link>
-                    <Link href="/contact" className="btn-premium w-full mt-2" onClick={() => setIsMenuOpen(false)}>Contact Us</Link>
                 </div>
             )}
         </header>

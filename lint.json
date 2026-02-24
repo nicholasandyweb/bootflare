@@ -1,0 +1,89 @@
+
+C:\Users\user\Desktop\bootflare\src\app\about-us\page.tsx
+   3:48   warning  'Globe' is defined but never used                                                                                                                                                                                                                                                        @typescript-eslint/no-unused-vars
+   4:8    warning  'Image' is defined but never used                                                                                                                                                                                                                                                        @typescript-eslint/no-unused-vars
+  78:29   error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`                                                                                                                                                                                                                          react/no-unescaped-entities
+  78:146  error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`                                                                                                                                                                                                                          react/no-unescaped-entities
+  87:25   warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+C:\Users\user\Desktop\bootflare\src\app\blog\[slug]\page.tsx
+    3:20  warning  'User' is defined but never used                                                                                                                                                                                                                                                         @typescript-eslint/no-unused-vars
+  141:15  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+C:\Users\user\Desktop\bootflare\src\app\blog\page.tsx
+    4:34  warning  'Clock' is defined but never used                                                                                                                                                                                                                                                        @typescript-eslint/no-unused-vars
+    4:41  warning  'User' is defined but never used                                                                                                                                                                                                                                                         @typescript-eslint/no-unused-vars
+   85:19  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  122:19  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+C:\Users\user\Desktop\bootflare\src\app\category\[slug]\page.tsx
+  152:37  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+C:\Users\user\Desktop\bootflare\src\app\free-brand-logos\page.tsx
+  3:8   warning  'Link' is defined but never used        @typescript-eslint/no-unused-vars
+  4:20  warning  'LayoutGrid' is defined but never used  @typescript-eslint/no-unused-vars
+  4:32  warning  'Clock' is defined but never used       @typescript-eslint/no-unused-vars
+  4:39  warning  'ArrowRight' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\user\Desktop\bootflare\src\app\logo\[slug]\page.tsx
+    3:39  warning  'ExternalLink' is defined but never used                                                                                                                                                                                                                                                 @typescript-eslint/no-unused-vars
+   80:27  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+  199:29  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+C:\Users\user\Desktop\bootflare\src\app\logos\category\[slug]\page.tsx
+  2:8  warning  'Link' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\user\Desktop\bootflare\src\app\logos\page.tsx
+  2:8   warning  'Link' is defined but never used    @typescript-eslint/no-unused-vars
+  3:10  warning  'Search' is defined but never used  @typescript-eslint/no-unused-vars
+  3:18  warning  'Filter' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\user\Desktop\bootflare\src\app\royalty-free-music\[slug]\page.tsx
+  83:29  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+C:\Users\user\Desktop\bootflare\src\app\royalty-free-music\page.tsx
+  90:19  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+C:\Users\user\Desktop\bootflare\src\components\ContactForm.tsx
+  80:67  error  `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+
+C:\Users\user\Desktop\bootflare\src\components\HomeClient.tsx
+    6:10  warning  'Layout' is defined but never used                                                                                                                                                                                                                                                       @typescript-eslint/no-unused-vars
+  142:41  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  171:37  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+C:\Users\user\Desktop\bootflare\src\components\LogoCard.tsx
+  29:21  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+C:\Users\user\Desktop\bootflare\src\components\LogoSearch.tsx
+   80:29  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+  133:45  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+C:\Users\user\Desktop\bootflare\src\components\layout\Footer.tsx
+   2:50  warning  'Mail' is defined but never used                                                                                                                                                                                                                                                         @typescript-eslint/no-unused-vars
+  12:29  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+C:\Users\user\Desktop\bootflare\src\lib\audit.ts
+  19:56  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\user\Desktop\bootflare\src\lib\graphql.ts
+  11:81  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\user\Desktop\bootflare\src\lib\introspect.ts
+  20:21  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  21:63  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  22:51  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\user\Desktop\bootflare\src\lib\introspect_types.ts
+  16:21  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  17:51  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  23:14  warning  'error' is defined but never used         @typescript-eslint/no-unused-vars
+  23:21  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\user\Desktop\bootflare\src\lib\introspect_v2.ts
+  16:21  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  21:51  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  31:21  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+✖ 46 problems (16 errors, 30 warnings)
+

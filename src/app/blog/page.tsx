@@ -2,6 +2,15 @@ import { fetchGraphQL } from '@/lib/graphql';
 import Link from 'next/link';
 import { stripScripts } from '@/lib/sanitize';
 import { Calendar, ChevronRight, Clock, User } from 'lucide-react';
+import { fetchRankMathSEO, mapRankMathToMetadata } from '@/lib/seo';
+import { Metadata } from 'next';
+
+export async function generateMetadata(): Promise<Metadata> {
+  const seo = await fetchRankMathSEO('https://bootflare.com/blog/');
+  if (seo) return mapRankMathToMetadata(seo);
+  return { title: 'Blog | Bootflare' };
+}
+
 
 const GET_POSTS = `
   query GetPosts($first: Int) {
@@ -83,14 +92,16 @@ export default async function BlogPage() {
               <div>
                 <div className="flex gap-2 mb-6">
                   {posts[0].categories.nodes.map(cat => (
-                    <span key={cat.slug} className="text-xs font-bold text-primary uppercase tracking-widest px-3 py-1 bg-primary/10 rounded-full">{cat.name}</span>
+                    <Link key={cat.slug} href={`/category/${cat.slug}`} className="text-xs font-bold text-primary uppercase tracking-widest px-3 py-1 bg-primary/10 rounded-full hover:bg-primary hover:text-white transition-all">
+                      {cat.name}
+                    </Link>
                   ))}
                 </div>
                 <Link href={`/blog/${posts[0].slug}`}>
                   <h2 className="text-3xl md:text-4xl font-bold mb-6 hover:text-primary transition-colors text-slate-900">{posts[0].title}</h2>
                 </Link>
                 <div
-                  className="text-slate-500 text-lg line-clamp-3 mb-8 font-light"
+                  className="text-slate-500 text-lg line-clamp-3 mb-8 font-light [&_p]:mb-0"
                   dangerouslySetInnerHTML={{ __html: stripScripts(posts[0].excerpt) }}
                   suppressHydrationWarning
                 />
@@ -118,7 +129,9 @@ export default async function BlogPage() {
               )}
               <div className="p-8 flex flex-col flex-1">
                 <div className="flex items-center gap-4 mb-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                  <span className="text-primary">{post.categories.nodes[0]?.name}</span>
+                  <Link href={`/category/${post.categories.nodes[0]?.slug}`} className="text-primary hover:underline">
+                    {post.categories.nodes[0]?.name}
+                  </Link>
                   <span>•</span>
                   <div className="flex items-center gap-1">
                     <Calendar className="w-3 h-3" />
@@ -133,7 +146,7 @@ export default async function BlogPage() {
                 </Link>
 
                 <div
-                  className="text-slate-500 text-sm line-clamp-2 mb-8 font-light flex-1"
+                  className="text-slate-500 text-sm line-clamp-2 mb-8 font-light flex-1 [&_p]:mb-0"
                   dangerouslySetInnerHTML={{ __html: stripScripts(post.excerpt) }}
                   suppressHydrationWarning
                 />

@@ -1,5 +1,14 @@
 import { fetchREST } from '@/lib/rest';
 import HomeClient from '@/components/HomeClient';
+import { fetchRankMathSEO, mapRankMathToMetadata } from '@/lib/seo';
+import { Metadata } from 'next';
+
+export async function generateMetadata(): Promise<Metadata> {
+  const seo = await fetchRankMathSEO('https://bootflare.com/');
+  if (seo) return mapRankMathToMetadata(seo);
+  return {};
+}
+
 
 export default async function Home() {
   let logoImages: string[] = [];
