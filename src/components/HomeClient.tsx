@@ -123,7 +123,7 @@ export default function HomeClient({ logos, music }: HomeClientProps) {
                             <h3 className="text-4xl md:text-5xl font-bold text-slate-900">Premium Digital Downloads</h3>
                         </div>
                         <div className="flex gap-4">
-                            <Link href="/logo" className="text-slate-600 font-bold hover:text-primary transition-colors flex items-center gap-2">
+                            <Link href="/logos" className="text-slate-600 font-bold hover:text-primary transition-colors flex items-center gap-2">
                                 View Gallery <ArrowRight className="w-4 h-4" />
                             </Link>
                         </div>
