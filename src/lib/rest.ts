@@ -2,16 +2,17 @@ const WP_URL = 'https://bootflare.com';
 
 export async function fetchREST(endpoint: string, retries = 2, namespace = 'wp/v2') {
     const separator = endpoint.includes('?') ? '&' : '?';
-    const baseUrl = endpoint.startsWith('http') ? endpoint : `${WP_URL}/wp-json/${namespace}/${endpoint}${separator}_embed`;
+    const embedParam = endpoint.includes('_embed') ? '' : `${separator}_embed`;
+    const baseUrl = endpoint.startsWith('http') ? endpoint : `${WP_URL}/wp-json/${namespace}/${endpoint}${embedParam}`;
     const url = baseUrl;
 
     for (let i = 0; i < retries; i++) {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 8000); // 8s timeout
+        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
 
         try {
             const res = await fetch(url, {
-                cache: 'no-store', // Always fetch fresh data since pages are force-dynamic
+                next: { revalidate: 3600 }, // Cache on edge for 1 hour
                 signal: controller.signal
             });
             clearTimeout(timeoutId);
@@ -87,16 +88,17 @@ export async function fetchREST(endpoint: string, retries = 2, namespace = 'wp/v
 
 export async function fetchRESTWithMeta(endpoint: string, retries = 2, namespace = 'wp/v2') {
     const separator = endpoint.includes('?') ? '&' : '?';
-    const baseUrl = endpoint.startsWith('http') ? endpoint : `${WP_URL}/wp-json/${namespace}/${endpoint}${separator}_embed`;
+    const embedParam = endpoint.includes('_embed') ? '' : `${separator}_embed`;
+    const baseUrl = endpoint.startsWith('http') ? endpoint : `${WP_URL}/wp-json/${namespace}/${endpoint}${embedParam}`;
     const url = baseUrl;
 
     for (let i = 0; i < retries; i++) {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 8000); // 8s timeout
+        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
 
         try {
             const res = await fetch(url, {
-                cache: 'no-store', // Always fetch fresh data since pages are force-dynamic
+                next: { revalidate: 3600 }, // Cache on edge for 1 hour
                 signal: controller.signal
             });
             clearTimeout(timeoutId);

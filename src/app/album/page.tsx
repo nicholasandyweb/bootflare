@@ -1,4 +1,4 @@
-export const dynamic = 'force-dynamic';
+export const revalidate = 3600;
 import { fetchREST, fetchRESTWithMeta } from '@/lib/rest';
 import { fetchGraphQL } from '@/lib/graphql';
 import Link from 'next/link';
@@ -8,7 +8,7 @@ import { Metadata } from 'next';
 import { fetchRankMathSEO, mapRankMathToMetadata } from '@/lib/seo';
 import Pagination from '@/components/Pagination';
 import { decodeEntities } from '@/lib/sanitize';
-import LogoSearch from '@/components/LogoSearch';
+
 
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -51,7 +51,7 @@ export default async function AlbumArchive({ searchParams }: { searchParams: Pro
 
     try {
         const [res, data, seo] = await Promise.all([
-            fetchRESTWithMeta(`album?per_page=12&page=${page}&_embed`),
+            fetchRESTWithMeta(`sr_playlist?per_page=12&page=${page}&_embed`),
             fetchGraphQL<WPData>(GET_PAGE_DATA),
             fetchRankMathSEO('https://bootflare.com/album/')
         ]);
@@ -89,9 +89,6 @@ export default async function AlbumArchive({ searchParams }: { searchParams: Pro
                         dangerouslySetInnerHTML={{ __html: description }}
                     />
 
-                    <div className="max-w-xl mx-auto">
-                        <LogoSearch />
-                    </div>
                 </div>
             </div>
 
