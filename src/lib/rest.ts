@@ -61,7 +61,13 @@ export async function fetchREST(endpoint: string, retries = 10, namespace = 'wp/
             }
 
             const jsonText = text.substring(start, end + 1);
-            return JSON.parse(jsonText);
+            try {
+                return JSON.parse(jsonText);
+            } catch (e) {
+                console.error(`Status: ${res.status} ${res.statusText}`);
+                console.error(`Failed to parse JSON for ${url}. Raw response starts with: ${text.substring(0, 500)}`);
+                throw e;
+            }
         } catch (error) {
             if (i === retries - 1) {
                 console.error(`Error fetching from REST API after ${retries} attempts (${url}):`, error);
