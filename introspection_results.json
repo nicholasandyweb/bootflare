@@ -1,0 +1,40 @@
+{
+  "contentTypes": {
+    "nodes": [
+      {
+        "name": "post",
+        "graphqlSingleName": "post",
+        "graphqlPluralName": "posts"
+      },
+      {
+        "name": "page",
+        "graphqlSingleName": "page",
+        "graphqlPluralName": "pages"
+      },
+      {
+        "name": "attachment",
+        "graphqlSingleName": "mediaItem",
+        "graphqlPluralName": "mediaItems"
+      }
+    ]
+  },
+  "taxonomies": {
+    "nodes": [
+      {
+        "name": "category",
+        "graphqlSingleName": "category",
+        "graphqlPluralName": "categories"
+      },
+      {
+        "name": "post_tag",
+        "graphqlSingleName": "tag",
+        "graphqlPluralName": "tags"
+      },
+      {
+        "name": "post_format",
+        "graphqlSingleName": "postFormat",
+        "graphqlPluralName": "postFormats"
+      }
+    ]
+  }
+}

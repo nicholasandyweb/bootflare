@@ -9,5 +9,19 @@ export const client = new GraphQLClient(endpoint, {
 });
 
 export async function fetchGraphQL<T>(query: string, variables?: Record<string, any>): Promise<T> {
-  return await client.request<T>(query, variables);
+  const res = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ query, variables }),
+    next: { revalidate: 3600 } // Cache for 1 hour
+  });
+
+  const json = await res.json();
+  if (json.errors) {
+    console.error('GraphQL Errors:', json.errors);
+    throw new Error('Failed to fetch API');
+  }
+  return json.data;
 }

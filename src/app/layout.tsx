@@ -26,9 +26,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body
         className={`${montserrat.variable} ${ubuntu.variable} antialiased font-sans`}
+        suppressHydrationWarning
       >
         <Header />
         <main className="mt-20 min-h-screen">

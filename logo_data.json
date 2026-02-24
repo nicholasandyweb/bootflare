@@ -1,0 +1,324 @@
+{
+  "id": 402990,
+  "date": "2026-02-11T19:41:57",
+  "date_gmt": "2026-02-11T19:41:57",
+  "guid": {
+    "rendered": "https://bootflare.com/?post_type=logo&#038;p=402990"
+  },
+  "modified": "2026-02-11T19:41:57",
+  "modified_gmt": "2026-02-11T19:41:57",
+  "slug": "fk-lakocherej-sport",
+  "status": "publish",
+  "type": "logo",
+  "link": "https://bootflare.com/logo/fk-lakocherej-sport/",
+  "title": {
+    "rendered": "FK Lakocherej Sport"
+  },
+  "content": {
+    "rendered": "<p>FK Lakocherej Sport is a prominent sports club known for its dynamic engagement in competitive football. Founded in the heart of Lakocherej, the club has cultivated a passionate community of players and supporters. With a rich history of local tournaments and league play, FK Lakocherej Sport has become a symbol of pride for its fans. The club’s facilities are updated regularly, providing athletes with the resources they need to excel.</p>\n<p>The FK Lakocherej Sport logo, a striking representation of the club’s identity, embodies the spirit of determination and teamwork. It serves not only as a badge of honor for players but also as a source of inspiration for aspiring young athletes in the region. The club emphasizes youth development, offering training programs aimed at nurturing the next generation of talent.</p>\n<p>Moreover, FK Lakocherej Sport fosters strong connections with the community, organizing events and outreach programs to promote healthy lifestyles through sports. The dedication to excellence, both on and off the field, is evident as the club continuously strives to improve its standings in the league. With the FK Lakocherej Sport logo proudly displayed, the club continues to chase new victories and forge lasting memories for its supporters.</p>\n",
+    "protected": false
+  },
+  "excerpt": {
+    "rendered": "<p>FK Lakocherej Sport is a prominent sports club known for its dynamic engagement in competitive football. Founded in the heart of Lakocherej, the club has cultivated a passionate community of players and supporters. With a rich history of local tournaments and league play, FK Lakocherej Sport has become a symbol of pride for its fans. [&hellip;]</p>\n",
+    "protected": false
+  },
+  "author": 1,
+  "featured_media": 402989,
+  "template": "",
+  "logo-collection": [],
+  "logos": [
+    339
+  ],
+  "class_list": [
+    "post-402990",
+    "logo",
+    "type-logo",
+    "status-publish",
+    "has-post-thumbnail",
+    "hentry",
+    "logos-sport"
+  ],
+  "custom_fields": {
+    "rank_math_focus_keyword": [
+      "fk lakocherej sport logo png download,FK Lakocherej Sport Logo Transparent PNG,FK Lakocherej Sport Logo Meaning"
+    ],
+    "rank_math_analytic_object_id": [
+      "108249"
+    ]
+  },
+  "_links": {
+    "self": [
+      {
+        "href": "https://bootflare.com/wp-json/wp/v2/logo/402990",
+        "targetHints": {
+          "allow": [
+            "GET"
+          ]
+        }
+      }
+    ],
+    "collection": [
+      {
+        "href": "https://bootflare.com/wp-json/wp/v2/logo"
+      }
+    ],
+    "about": [
+      {
+        "href": "https://bootflare.com/wp-json/wp/v2/types/logo"
+      }
+    ],
+    "author": [
+      {
+        "embeddable": true,
+        "href": "https://bootflare.com/wp-json/wp/v2/users/1"
+      }
+    ],
+    "version-history": [
+      {
+        "count": 1,
+        "href": "https://bootflare.com/wp-json/wp/v2/logo/402990/revisions"
+      }
+    ],
+    "predecessor-version": [
+      {
+        "id": 408905,
+        "href": "https://bootflare.com/wp-json/wp/v2/logo/402990/revisions/408905"
+      }
+    ],
+    "wp:featuredmedia": [
+      {
+        "embeddable": true,
+        "href": "https://bootflare.com/wp-json/wp/v2/media/402989"
+      }
+    ],
+    "wp:attachment": [
+      {
+        "href": "https://bootflare.com/wp-json/wp/v2/media?parent=402990"
+      }
+    ],
+    "wp:term": [
+      {
+        "taxonomy": "logo-collection",
+        "embeddable": true,
+        "href": "https://bootflare.com/wp-json/wp/v2/logo-collection?post=402990"
+      },
+      {
+        "taxonomy": "logos",
+        "embeddable": true,
+        "href": "https://bootflare.com/wp-json/wp/v2/logos?post=402990"
+      }
+    ],
+    "curies": [
+      {
+        "name": "wp",
+        "href": "https://api.w.org/{rel}",
+        "templated": true
+      }
+    ]
+  },
+  "_embedded": {
+    "author": [
+      {
+        "id": 1,
+        "name": "Andy",
+        "url": "https://bootflare.com",
+        "description": "",
+        "link": "https://bootflare.com/author/n_andy/",
+        "slug": "n_andy",
+        "avatar_urls": {
+          "24": "https://secure.gravatar.com/avatar/ff8f86ef6746a06559301778d248c20b5a88e664026066eef11b9edb6a6fa214?s=24&d=https%3A%2F%2Fbootflare.com%2Fwp-content%2Fuploads%2F2023%2F02%2FUserAvatar.png&r=g",
+          "48": "https://secure.gravatar.com/avatar/ff8f86ef6746a06559301778d248c20b5a88e664026066eef11b9edb6a6fa214?s=48&d=https%3A%2F%2Fbootflare.com%2Fwp-content%2Fuploads%2F2023%2F02%2FUserAvatar.png&r=g",
+          "96": "https://secure.gravatar.com/avatar/ff8f86ef6746a06559301778d248c20b5a88e664026066eef11b9edb6a6fa214?s=96&d=https%3A%2F%2Fbootflare.com%2Fwp-content%2Fuploads%2F2023%2F02%2FUserAvatar.png&r=g"
+        },
+        "_links": {
+          "self": [
+            {
+              "href": "https://bootflare.com/wp-json/wp/v2/users/1",
+              "targetHints": {
+                "allow": [
+                  "GET"
+                ]
+              }
+            }
+          ],
+          "collection": [
+            {
+              "href": "https://bootflare.com/wp-json/wp/v2/users"
+            }
+          ]
+        }
+      }
+    ],
+    "wp:featuredmedia": [
+      {
+        "id": 402989,
+        "date": "2026-02-08T21:22:54",
+        "slug": "fk-lakocherej-sport-logo",
+        "type": "attachment",
+        "link": "https://bootflare.com/logo/fk-lakocherej-sport/fk-lakocherej-sport-logo/",
+        "title": {
+          "rendered": "FK Lakocherej Sport Logo"
+        },
+        "author": 1,
+        "featured_media": 0,
+        "caption": {
+          "rendered": ""
+        },
+        "alt_text": "FK Lakocherej Sport Logo Transparent PNG",
+        "media_type": "image",
+        "mime_type": "image/png",
+        "media_details": {
+          "width": 320,
+          "height": 320,
+          "file": "2026/02/FK-Lakocherej-Sport-Logo.png",
+          "filesize": 19336,
+          "sizes": {
+            "medium": {
+              "file": "FK-Lakocherej-Sport-Logo-300x300.png",
+              "width": 300,
+              "height": 300,
+              "filesize": 26531,
+              "mime_type": "image/png",
+              "source_url": "https://bootflare.com/wp-content/uploads/2026/02/FK-Lakocherej-Sport-Logo-300x300.png"
+            },
+            "thumbnail": {
+              "file": "FK-Lakocherej-Sport-Logo-150x150.png",
+              "width": 150,
+              "height": 150,
+              "filesize": 9574,
+              "mime_type": "image/png",
+              "source_url": "https://bootflare.com/wp-content/uploads/2026/02/FK-Lakocherej-Sport-Logo-150x150.png"
+            },
+            "yarpp-thumbnail": {
+              "file": "FK-Lakocherej-Sport-Logo-120x120.png",
+              "width": 120,
+              "height": 120,
+              "filesize": 6974,
+              "mime_type": "image/png",
+              "source_url": "https://bootflare.com/wp-content/uploads/2026/02/FK-Lakocherej-Sport-Logo-120x120.png"
+            },
+            "crp_thumbnail": {
+              "file": "FK-Lakocherej-Sport-Logo-150x150.png",
+              "width": 150,
+              "height": 150,
+              "filesize": 9574,
+              "mime_type": "image/png",
+              "source_url": "https://bootflare.com/wp-content/uploads/2026/02/FK-Lakocherej-Sport-Logo-150x150.png"
+            },
+            "full": {
+              "file": "FK-Lakocherej-Sport-Logo.png",
+              "width": 320,
+              "height": 320,
+              "mime_type": "image/png",
+              "source_url": "https://bootflare.com/wp-content/uploads/2026/02/FK-Lakocherej-Sport-Logo.png"
+            }
+          },
+          "image_meta": {
+            "aperture": "0",
+            "credit": "",
+            "camera": "",
+            "caption": "",
+            "created_timestamp": "0",
+            "copyright": "",
+            "focal_length": "0",
+            "iso": "0",
+            "shutter_speed": "0",
+            "title": "",
+            "orientation": "0",
+            "keywords": []
+          }
+        },
+        "source_url": "https://bootflare.com/wp-content/uploads/2026/02/FK-Lakocherej-Sport-Logo.png",
+        "_links": {
+          "self": [
+            {
+              "href": "https://bootflare.com/wp-json/wp/v2/media/402989",
+              "targetHints": {
+                "allow": [
+                  "GET"
+                ]
+              }
+            }
+          ],
+          "collection": [
+            {
+              "href": "https://bootflare.com/wp-json/wp/v2/media"
+            }
+          ],
+          "about": [
+            {
+              "href": "https://bootflare.com/wp-json/wp/v2/types/attachment"
+            }
+          ],
+          "author": [
+            {
+              "embeddable": true,
+              "href": "https://bootflare.com/wp-json/wp/v2/users/1"
+            }
+          ],
+          "wp:attached-to": [
+            {
+              "embeddable": true,
+              "post_type": "logo",
+              "id": 402990,
+              "href": "https://bootflare.com/wp-json/wp/v2/logo/402990"
+            }
+          ],
+          "curies": [
+            {
+              "name": "wp",
+              "href": "https://api.w.org/{rel}",
+              "templated": true
+            }
+          ]
+        }
+      }
+    ],
+    "wp:term": [
+      [],
+      [
+        {
+          "id": 339,
+          "link": "https://bootflare.com/logos/sport/",
+          "name": "Sport",
+          "slug": "sport",
+          "taxonomy": "logos",
+          "_links": {
+            "self": [
+              {
+                "href": "https://bootflare.com/wp-json/wp/v2/logos/339",
+                "targetHints": {
+                  "allow": [
+                    "GET"
+                  ]
+                }
+              }
+            ],
+            "collection": [
+              {
+                "href": "https://bootflare.com/wp-json/wp/v2/logos"
+              }
+            ],
+            "about": [
+              {
+                "href": "https://bootflare.com/wp-json/wp/v2/taxonomies/logos"
+              }
+            ],
+            "wp:post_type": [
+              {
+                "href": "https://bootflare.com/wp-json/wp/v2/logo?logos=339"
+              }
+            ],
+            "curies": [
+              {
+                "name": "wp",
+                "href": "https://api.w.org/{rel}",
+                "templated": true
+              }
+            ]
+          }
+        }
+      ]
+    ]
+  }
+}
