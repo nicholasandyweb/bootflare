@@ -5,6 +5,9 @@ import Pagination from '@/components/Pagination';
 import LogoSearch from '@/components/LogoSearch';
 import CategoryList from '@/components/CategoryList';
 
+export const runtime = 'edge';
+export const dynamicParams = true;
+
 interface Logo {
     id: number;
     title: {

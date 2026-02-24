@@ -4,7 +4,7 @@ import { stripScripts } from '@/lib/sanitize';
 import { Calendar, ChevronRight, Hash } from 'lucide-react';
 import { Metadata } from 'next';
 
-export const revalidate = 3600;
+export const runtime = 'edge';
 export const dynamicParams = true;
 
 const GET_CATEGORY_POSTS = `

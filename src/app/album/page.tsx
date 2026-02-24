@@ -9,7 +9,7 @@ import Pagination from '@/components/Pagination';
 import { decodeEntities } from '@/lib/sanitize';
 import LogoSearch from '@/components/LogoSearch';
 
-export const revalidate = 60;
+export const runtime = 'edge';
 
 export async function generateMetadata(): Promise<Metadata> {
     const seo = await fetchRankMathSEO('https://bootflare.com/album/');

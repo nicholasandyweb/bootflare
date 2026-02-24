@@ -4,7 +4,7 @@ import LogoCard from '@/components/LogoCard';
 import Pagination from '@/components/Pagination';
 import LogoSearch from '@/components/LogoSearch';
 
-export const revalidate = 3600;
+export const runtime = 'edge';
 export const dynamicParams = true;
 
 interface Logo {

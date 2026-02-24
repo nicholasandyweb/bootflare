@@ -8,9 +8,8 @@ import LogoCard from '@/components/LogoCard';
 import CategoryList from '@/components/CategoryList';
 import { Metadata } from 'next';
 
-// ISR: cache each logo page for 1 hour — rendered on first request, then served from cache.
-// No pages are pre-built at build time to avoid hammering the WordPress REST API.
-export const revalidate = 3600;
+// Rendered on-demand via Cloudflare's edge network on every request.
+export const runtime = 'edge';
 export const dynamicParams = true;
 
 interface Logo {

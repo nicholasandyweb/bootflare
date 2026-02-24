@@ -6,7 +6,7 @@ import MusicPlayer from '@/components/MusicPlayer';
 import Pagination from '@/components/Pagination';
 import FileInfoCard from '@/components/FileInfoCard';
 
-export const revalidate = 3600;
+export const runtime = 'edge';
 export const dynamicParams = true;
 
 interface Track {
