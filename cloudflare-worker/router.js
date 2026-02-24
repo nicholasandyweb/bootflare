@@ -47,14 +47,16 @@ export default {
 
         if (isWordPressPath) {
             // ── WordPress: pass through to shared hosting origin ──
-            // Using resolveOverride to bypass Cloudflare DNS and route directly to 
-            // the shared hosting IP. This breaks the infinite routing loop caused
+            // Using resolveOverride to bypass Cloudflare and route to our grey-cloud
+            // fallback DNS record. This breaks the infinite routing loop caused
             // by the Worker calling fetch('https://bootflare.com/...')
-            // 185.91.127.12 is the raw IP for bootflare.com's shared host.
+            // By resolving to the origin-wp hostname, Cloudflare connects to the
+            // shared host IP, but importantly keeps the TLS SNI and Host header 
+            // exactly as `bootflare.com`, satisfying the strict LiteSpeed server.
             const newRequest = new Request(request.url, request);
             return fetch(newRequest, {
                 cf: {
-                    resolveOverride: '185.91.127.12'
+                    resolveOverride: 'origin-wp.bootflare.com'
                 }
             });
         }
