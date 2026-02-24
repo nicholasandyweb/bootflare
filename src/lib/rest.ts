@@ -11,7 +11,7 @@ export async function fetchREST(endpoint: string, retries = 2, namespace = 'wp/v
 
         try {
             const res = await fetch(url, {
-                next: { revalidate: 60 }, // Cache for 1 minute for fresher updates
+                cache: 'no-store', // Always fetch fresh data since pages are force-dynamic
                 signal: controller.signal
             });
             clearTimeout(timeoutId);
@@ -96,7 +96,7 @@ export async function fetchRESTWithMeta(endpoint: string, retries = 2, namespace
 
         try {
             const res = await fetch(url, {
-                next: { revalidate: 60 }, // Cache for 1 minute
+                cache: 'no-store', // Always fetch fresh data since pages are force-dynamic
                 signal: controller.signal
             });
             clearTimeout(timeoutId);

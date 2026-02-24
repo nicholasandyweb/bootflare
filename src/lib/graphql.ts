@@ -20,7 +20,7 @@ export async function fetchGraphQL<T>(query: string, variables?: Record<string, 
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ query, variables }),
-        next: { revalidate: 3600 }, // Cache for 1 hour
+        cache: 'no-store', // Ensure fresh data on every render (no 1-hour stale data)
         signal: controller.signal
       });
       clearTimeout(timeoutId);
