@@ -1,13 +1,13 @@
 const WP_URL = 'https://bootflare.com';
 
-export async function fetchREST(endpoint: string, retries = 10, namespace = 'wp/v2') {
+export async function fetchREST(endpoint: string, retries = 2, namespace = 'wp/v2') {
     const separator = endpoint.includes('?') ? '&' : '?';
     const baseUrl = endpoint.startsWith('http') ? endpoint : `${WP_URL}/wp-json/${namespace}/${endpoint}${separator}_embed`;
     const url = baseUrl;
 
     for (let i = 0; i < retries; i++) {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 60000); // 1 minute timeout per fetch
+        const timeoutId = setTimeout(() => controller.abort(), 8000); // 8s timeout
 
         try {
             const res = await fetch(url, {
@@ -85,14 +85,14 @@ export async function fetchREST(endpoint: string, retries = 10, namespace = 'wp/
     return [];
 }
 
-export async function fetchRESTWithMeta(endpoint: string, retries = 10, namespace = 'wp/v2') {
+export async function fetchRESTWithMeta(endpoint: string, retries = 2, namespace = 'wp/v2') {
     const separator = endpoint.includes('?') ? '&' : '?';
     const baseUrl = endpoint.startsWith('http') ? endpoint : `${WP_URL}/wp-json/${namespace}/${endpoint}${separator}_embed`;
     const url = baseUrl;
 
     for (let i = 0; i < retries; i++) {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 60000); // 1 minute timeout per fetch
+        const timeoutId = setTimeout(() => controller.abort(), 8000); // 8s timeout
 
         try {
             const res = await fetch(url, {

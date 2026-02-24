@@ -1,4 +1,5 @@
 export const dynamic = 'force-dynamic';
+import { cache } from 'react';
 import { fetchREST } from '@/lib/rest';
 import Link from 'next/link';
 import { Download, ChevronLeft, Flag, ExternalLink } from 'lucide-react';
@@ -11,6 +12,14 @@ import { Metadata } from 'next';
 
 // Rendered on-demand via Cloudflare's edge network on every request.
 export const dynamicParams = true;
+
+// React cache() deduplicates this call within a single request:
+// generateMetadata and the page body both call getLogoBySlug(slug)
+// but WordPress is only hit once.
+const getLogoBySlug = cache(async (slug: string) => {
+    const logos = await fetchREST(`logo?slug=${slug}&_embed`);
+    return logos.length > 0 ? (logos[0] as Logo) : null;
+});
 
 interface Logo {
     id: number;
@@ -42,18 +51,15 @@ interface Logo {
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
     const { slug } = await params;
     try {
-        // Prefer RankMath's dedicated SEO endpoint — this is the source of truth
-        // for whatever you set in the RankMath meta box in WordPress.
-        const rankMathSeo = await fetchRankMathSEO(`https://bootflare.com/logo/${slug}/`);
-        if (rankMathSeo) {
-            return mapRankMathToMetadata(rankMathSeo);
-        }
+        // Fetch SEO and logo data in parallel — both are needed and independent.
+        // getLogoBySlug uses React cache() so the page body won't re-fetch it.
+        const [rankMathSeo, logo] = await Promise.all([
+            fetchRankMathSEO(`https://bootflare.com/logo/${slug}/`),
+            getLogoBySlug(slug),
+        ]);
 
-        // Fallback: use the WP REST response (excerpt/content as description)
-        const logos = await fetchREST(`logo?slug=${slug}&_embed`);
-        if (logos.length > 0) {
-            return mapWPToMetadata(logos[0], 'Free Brand Logos - Bootflare');
-        }
+        if (rankMathSeo) return mapRankMathToMetadata(rankMathSeo);
+        if (logo) return mapWPToMetadata(logo, 'Free Brand Logos - Bootflare');
     } catch (error) {
         console.error('Error generating metadata for logo:', error);
     }
@@ -104,10 +110,9 @@ export default async function SingleLogo({ params }: { params: Promise<{ slug: s
     let logo: Logo | null = null;
 
     try {
-        const logos = await fetchREST(`logo?slug=${slug}&_embed`);
-        if (logos.length > 0) {
-            logo = logos[0];
-        }
+        // getLogoBySlug is wrapped in React cache() — if generateMetadata already
+        // fetched this slug, this returns the cached result with no extra WP call.
+        logo = await getLogoBySlug(slug);
     } catch (error) {
         console.error('Error fetching logo:', error);
     }
