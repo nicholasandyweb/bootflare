@@ -6,6 +6,9 @@ import MusicPlayer from '@/components/MusicPlayer';
 import Pagination from '@/components/Pagination';
 import FileInfoCard from '@/components/FileInfoCard';
 
+export const revalidate = 3600;
+export const dynamicParams = true;
+
 interface Track {
     id: number;
     mp3: string;
@@ -42,15 +45,7 @@ interface Album {
 }
 
 export async function generateStaticParams() {
-    try {
-        const albums: Album[] = await fetchREST('sr_playlist?per_page=100');
-        return albums.map((album) => ({
-            slug: album.slug,
-        }));
-    } catch (error) {
-        console.error('Error generating static params for music:', error);
-        return [];
-    }
+    return [];
 }
 
 export default async function SingleMusic({ params, searchParams }: { params: Promise<{ slug: string }>, searchParams: Promise<{ page?: string }> }) {

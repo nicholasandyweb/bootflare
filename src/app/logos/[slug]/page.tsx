@@ -5,6 +5,9 @@ import Pagination from '@/components/Pagination';
 import LogoSearch from '@/components/LogoSearch';
 import CategoryList from '@/components/CategoryList';
 
+export const revalidate = 3600;
+export const dynamicParams = true;
+
 interface Logo {
     id: number;
     title: {
@@ -19,16 +22,9 @@ interface Logo {
     };
 }
 
+// Don't pre-build at build time — render on-demand (ISR) to avoid overloading WordPress.
 export async function generateStaticParams() {
-    try {
-        const categories: { slug: string }[] = await fetchREST('logos?per_page=100');
-        return categories.map((cat) => ({
-            slug: cat.slug,
-        }));
-    } catch (error) {
-        console.error('Error generating static params for categories:', error);
-        return [];
-    }
+    return [];
 }
 
 export default async function LogoCategory({ params }: { params: Promise<{ slug: string }> }) {

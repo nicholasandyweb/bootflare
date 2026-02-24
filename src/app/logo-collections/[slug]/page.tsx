@@ -4,6 +4,9 @@ import LogoCard from '@/components/LogoCard';
 import Pagination from '@/components/Pagination';
 import LogoSearch from '@/components/LogoSearch';
 
+export const revalidate = 3600;
+export const dynamicParams = true;
+
 interface Logo {
     id: number;
     title: {
@@ -18,16 +21,9 @@ interface Logo {
     };
 }
 
+// Don't pre-build at build time — render on-demand (ISR) to avoid overloading WordPress.
 export async function generateStaticParams() {
-    try {
-        const collections: { slug: string }[] = await fetchREST('logo-collection?per_page=100');
-        return collections.map((cat) => ({
-            slug: cat.slug,
-        }));
-    } catch (error) {
-        console.error('Error generating static params for logo collection:', error);
-        return [];
-    }
+    return [];
 }
 
 export default async function LogoCollectionPage({ params }: { params: Promise<{ slug: string }> }) {

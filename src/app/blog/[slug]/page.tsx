@@ -5,6 +5,9 @@ import Link from 'next/link';
 import { Metadata } from 'next';
 import { mapWPToMetadata } from '@/lib/seo';
 
+export const revalidate = 3600;
+export const dynamicParams = true;
+
 const GET_SINGLE_POST = `
   query GetSinglePost($slug: ID!) {
     post(id: $slug, idType: SLUG) {
@@ -69,24 +72,7 @@ interface Post {
 }
 
 export async function generateStaticParams() {
-  const GET_ALL_POST_SLUGS = `
-    query GetAllPostSlugs {
-      posts(first: 100) {
-        nodes {
-          slug
-        }
-      }
-    }
-  `;
-  try {
-    const data: { posts: { nodes: { slug: string }[] } } = await fetchGraphQL(GET_ALL_POST_SLUGS);
-    return data.posts.nodes.map((post) => ({
-      slug: post.slug,
-    }));
-  } catch (error) {
-    console.error('Error generating static params for posts:', error);
-    return [];
-  }
+  return [];
 }
 
 export default async function BlogPost({ params }: { params: Promise<{ slug: string }> }) {

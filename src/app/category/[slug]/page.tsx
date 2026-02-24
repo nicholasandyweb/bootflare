@@ -4,6 +4,9 @@ import { stripScripts } from '@/lib/sanitize';
 import { Calendar, ChevronRight, Hash } from 'lucide-react';
 import { Metadata } from 'next';
 
+export const revalidate = 3600;
+export const dynamicParams = true;
+
 const GET_CATEGORY_POSTS = `
   query GetCategoryPosts($slug: ID!) {
     category(id: $slug, idType: SLUG) {
@@ -79,24 +82,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 }
 
 export async function generateStaticParams() {
-    const GET_CATEGORY_SLUGS = `
-    query GetCategorySlugs {
-      categories(first: 100) {
-        nodes {
-          slug
-        }
-      }
-    }
-  `;
-    try {
-        const data: { categories: { nodes: { slug: string }[] } } = await fetchGraphQL(GET_CATEGORY_SLUGS);
-        return data.categories.nodes.map((cat) => ({
-            slug: cat.slug,
-        }));
-    } catch (error) {
-        console.error('Error generating static params for categories:', error);
-        return [];
-    }
+    return [];
 }
 
 export default async function CategoryPage({ params }: { params: Promise<{ slug: string }> }) {

@@ -8,11 +8,10 @@ import LogoCard from '@/components/LogoCard';
 import CategoryList from '@/components/CategoryList';
 import { Metadata } from 'next';
 
-// ISR: cache each logo page for 1 hour. After the first visit, subsequent
-// requests are served instantly from the cache. Background revalidation
-// keeps the content fresh without blocking any user.
+// ISR: cache each logo page for 1 hour — rendered on first request, then served from cache.
+// No pages are pre-built at build time to avoid hammering the WordPress REST API.
 export const revalidate = 3600;
-
+export const dynamicParams = true;
 
 interface Logo {
     id: number;
@@ -62,16 +61,11 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     return { title: 'Logo Not Found | Bootflare' };
 }
 
+// Don't pre-build any logo pages at build time — they are rendered on-demand (ISR).
+// This prevents hundreds of parallel WordPress REST API calls during the build
+// which caused 503 errors on shared hosting.
 export async function generateStaticParams() {
-    try {
-        const logos: Logo[] = await fetchREST('logo?per_page=100');
-        return logos.map((logo) => ({
-            slug: logo.slug,
-        }));
-    } catch (error) {
-        console.error('Error generating static params for logos:', error);
-        return [];
-    }
+    return [];
 }
 
 async function getRelatedLogos(logo: Logo) {
