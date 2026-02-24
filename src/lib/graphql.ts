@@ -31,7 +31,7 @@ export async function fetchGraphQL<T>(query: string, variables?: Record<string, 
     json = JSON.parse(text);
   } catch (e) {
     console.error(`Status: ${res.status} ${res.statusText}`);
-    console.error(`Invalid JSON response: ${text.substring(0, 1000)}`);
+    console.error(`Invalid JSON response (first 100 chars): ${text.substring(0, 100)}`);
     throw new Error('Failed to parse GraphQL response as JSON');
   }
 

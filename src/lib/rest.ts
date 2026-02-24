@@ -1,4 +1,4 @@
-const WP_URL = 'https://bootflare.com';
+const WP_URL = process.env.NEXT_PUBLIC_WORDPRESS_URL || 'https://bootflare.com';
 
 export async function fetchREST(endpoint: string, retries = 10, namespace = 'wp/v2') {
     const separator = endpoint.includes('?') ? '&' : '?';
@@ -26,7 +26,8 @@ export async function fetchREST(endpoint: string, retries = 10, namespace = 'wp/
 
             if (!res.ok) {
                 console.error(`Link fetch failed: ${url} - ${res.statusText}`);
-                return i === retries - 1 ? [] : continue_retry();
+                if (i === retries - 1) return [];
+                continue;
             }
 
             const text = await res.text();
@@ -43,7 +44,8 @@ export async function fetchREST(endpoint: string, retries = 10, namespace = 'wp/
 
             if (start === -1) {
                 console.error(`No JSON found in response from ${url}`);
-                return [];
+                if (i === retries - 1) return [];
+                continue;
             }
 
             const lastBracket = text.lastIndexOf(']');
@@ -57,7 +59,8 @@ export async function fetchREST(endpoint: string, retries = 10, namespace = 'wp/
 
             if (end === -1 || end < start) {
                 console.error(`Invalid JSON boundaries in response from ${url}`);
-                return [];
+                if (i === retries - 1) return [];
+                continue;
             }
 
             const jsonText = text.substring(start, end + 1);
@@ -65,8 +68,9 @@ export async function fetchREST(endpoint: string, retries = 10, namespace = 'wp/
                 return JSON.parse(jsonText);
             } catch (e) {
                 console.error(`Status: ${res.status} ${res.statusText}`);
-                console.error(`Failed to parse JSON for ${url}. Raw response starts with: ${text.substring(0, 500)}`);
-                throw e;
+                console.error(`Failed to parse JSON for ${url}. Response starts with: ${text.substring(0, 100)}`);
+                if (i === retries - 1) return [];
+                continue;
             }
         } catch (error) {
             if (i === retries - 1) {
@@ -79,11 +83,6 @@ export async function fetchREST(endpoint: string, retries = 10, namespace = 'wp/
         }
     }
     return [];
-
-    function continue_retry() {
-        // Helper to satisfy loop continue logic for non-ok status if needed
-        return null;
-    }
 }
 
 export async function fetchRESTWithMeta(endpoint: string, retries = 10, namespace = 'wp/v2') {
@@ -135,7 +134,8 @@ export async function fetchRESTWithMeta(endpoint: string, retries = 10, namespac
 
             if (start === -1) {
                 console.error(`No JSON found in response from ${url}`);
-                return { data: [], totalPages, totalItems };
+                if (i === retries - 1) return { data: [], totalPages, totalItems };
+                continue;
             }
 
             const lastBracket = text.lastIndexOf(']');
@@ -149,11 +149,19 @@ export async function fetchRESTWithMeta(endpoint: string, retries = 10, namespac
 
             if (end === -1 || end < start) {
                 console.error(`Invalid JSON boundaries in response from ${url}`);
-                return { data: [], totalPages, totalItems };
+                if (i === retries - 1) return { data: [], totalPages, totalItems };
+                continue;
             }
 
             const jsonText = text.substring(start, end + 1);
-            return { data: JSON.parse(jsonText), totalPages, totalItems };
+            try {
+                return { data: JSON.parse(jsonText), totalPages, totalItems };
+            } catch (e) {
+                console.error(`Status: ${res.status} ${res.statusText}`);
+                console.error(`Failed to parse JSON for ${url}. Response starts with: ${text.substring(0, 100)}`);
+                if (i === retries - 1) return { data: [], totalPages, totalItems };
+                continue;
+            }
         } catch (error) {
             if (i === retries - 1) {
                 console.error(`Error fetching from REST API after ${retries} attempts (${url}):`, error);
