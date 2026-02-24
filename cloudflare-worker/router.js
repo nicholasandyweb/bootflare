@@ -29,6 +29,10 @@ const WP_PATHS = [
     '/wp-signup.php',
     '/wp-cron.php',
     '/xmlrpc.php',
+    '/graphql',          // WPGraphQL endpoint — Next.js fetches this server-side
+    '/sitemap.xml',      // WordPress SEO sitemap
+    '/sitemap_index.xml',
+    '/robots.txt',
 ];
 
 export default {
