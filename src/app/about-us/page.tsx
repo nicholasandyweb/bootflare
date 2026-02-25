@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 export const revalidate = 3600;
 import { fetchGraphQL } from '@/lib/graphql';
 import { stripScripts, stripUnwantedTerms } from '@/lib/sanitize';

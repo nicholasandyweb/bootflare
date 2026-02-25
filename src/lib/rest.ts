@@ -103,7 +103,7 @@ export async function fetchREST(endpoint: string, retries = 2, namespace = 'wp/v
         } catch (error) {
             const isTimeout = error instanceof Error && (error.name === 'AbortError' || error.message.includes('aborted'));
             if (isTimeout) {
-                console.error(`Fetch timed out after 120s for ${url}. Failing fast to avoid loop.`);
+                console.error(`Fetch timed out after 25s for ${url}. Failing fast to avoid loop.`);
                 return []; // Fail fast on timeout
             }
 
@@ -224,7 +224,7 @@ export async function fetchRESTWithMeta(endpoint: string, retries = 2, namespace
         } catch (error) {
             const isTimeout = error instanceof Error && (error.name === 'AbortError' || error.message.includes('aborted'));
             if (isTimeout) {
-                console.error(`Fetch timed out after 120s for ${url}. Failing fast to avoid loop.`);
+                console.error(`Fetch timed out after 25s for ${url}. Failing fast to avoid loop.`);
                 return { data: [], totalPages: 1, totalItems: 0 }; // Fail fast on timeout
             }
 
