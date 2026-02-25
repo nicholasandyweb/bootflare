@@ -39,7 +39,21 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       if (seo) return mapRankMathToMetadata(seo);
 
       // Fallback
-      return mapWPToMetadata(post, 'Blog | Bootflare');
+      const metadata = mapWPToMetadata(post, 'Blog | Bootflare');
+      const featuredImage = post._embedded?.['wp:featuredmedia']?.[0]?.source_url;
+
+      return {
+        ...metadata,
+        alternates: {
+          canonical: `https://bootflare.com/${slug}/`,
+        },
+        // Preload the featured image to reduce LCP discovery delay
+        other: featuredImage ? {
+          'rel': 'preload',
+          'as': 'image',
+          'href': featuredImage,
+        } : {},
+      };
     }
   } catch (error) {
     console.error('Error generating metadata for blog post:', error);
@@ -109,7 +123,13 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
 
           {featuredImage && (
             <div className="mb-20 rounded-[3rem] overflow-hidden shadow-2xl shadow-slate-200 border-8 border-white ring-1 ring-slate-100">
-              <img src={featuredImage} alt={post.title.rendered} className="w-full h-auto" />
+              <img
+                src={featuredImage}
+                alt={post.title.rendered}
+                className="w-full h-auto"
+                // @ts-ignore - fetchPriority is supported in modern browsers
+                fetchPriority="high"
+              />
             </div>
           )}
 
