@@ -23,32 +23,32 @@ const Header = () => {
                 </Link>
 
                 <nav className="hidden lg:flex gap-8 items-center">
-                    <Link href="/" prefetch={true} className="font-bold text-primary">Home</Link>
-                    <Link href="/about-us" prefetch={true} className="font-semibold text-slate-600 hover:text-primary transition-colors">About</Link>
+                    <Link href="/" prefetch={false} className="font-bold text-primary">Home</Link>
+                    <Link href="/about-us" prefetch={false} className="font-semibold text-slate-600 hover:text-primary transition-colors">About</Link>
 
                     <div className="group relative">
                         <button className="flex items-center gap-1 font-semibold text-slate-600 hover:text-primary transition-colors py-2">
                             Downloads <ChevronDown className="w-4 h-4" />
                         </button>
                         <div className="absolute hidden group-hover:block top-full left-0 bg-white shadow-2xl rounded-2xl p-3 min-w-[220px] border border-slate-100 animate-in fade-in slide-in-from-top-2">
-                            <Link href="/free-brand-logos" prefetch={true} className="block px-4 py-2.5 hover:bg-slate-50 hover:text-primary rounded-xl transition-colors font-medium text-slate-700">Free Brand Logos</Link>
-                            <Link href="/royalty-free-music" prefetch={true} className="block px-4 py-2.5 hover:bg-slate-50 hover:text-primary rounded-xl transition-colors font-medium text-slate-700">Royalty Free Music</Link>
+                            <Link href="/free-brand-logos" prefetch={false} className="block px-4 py-2.5 hover:bg-slate-50 hover:text-primary rounded-xl transition-colors font-medium text-slate-700">Free Brand Logos</Link>
+                            <Link href="/royalty-free-music" prefetch={false} className="block px-4 py-2.5 hover:bg-slate-50 hover:text-primary rounded-xl transition-colors font-medium text-slate-700">Royalty Free Music</Link>
                         </div>
                     </div>
 
                     <div className="group relative">
-                        <Link href="/blog" className="flex items-center gap-1 font-semibold text-slate-600 hover:text-primary transition-colors py-2">
+                        <Link href="/blog" prefetch={false} className="flex items-center gap-1 font-semibold text-slate-600 hover:text-primary transition-colors py-2">
                             Blog <ChevronDown className="w-4 h-4" />
                         </Link>
                         <div className="absolute hidden group-hover:block top-full left-0 bg-white shadow-2xl rounded-2xl p-3 min-w-[180px] border border-slate-100 animate-in fade-in slide-in-from-top-2">
-                            <Link href="/category/general" prefetch={true} className="block px-4 py-2.5 hover:bg-slate-50 hover:text-primary rounded-xl transition-colors font-medium text-slate-700">General</Link>
-                            <Link href="/category/tech" prefetch={true} className="block px-4 py-2.5 hover:bg-slate-50 hover:text-primary rounded-xl transition-colors font-medium text-slate-700">Tech</Link>
-                            <Link href="/category/tips" prefetch={true} className="block px-4 py-2.5 hover:bg-slate-50 hover:text-primary rounded-xl transition-colors font-medium text-slate-700">Tips</Link>
-                            <Link href="/category/web-design" prefetch={true} className="block px-4 py-2.5 hover:bg-slate-50 hover:text-primary rounded-xl transition-colors font-medium text-slate-700">Web Design</Link>
+                            <Link href="/category/general" prefetch={false} className="block px-4 py-2.5 hover:bg-slate-50 hover:text-primary rounded-xl transition-colors font-medium text-slate-700">General</Link>
+                            <Link href="/category/tech" prefetch={false} className="block px-4 py-2.5 hover:bg-slate-50 hover:text-primary rounded-xl transition-colors font-medium text-slate-700">Tech</Link>
+                            <Link href="/category/tips" prefetch={false} className="block px-4 py-2.5 hover:bg-slate-50 hover:text-primary rounded-xl transition-colors font-medium text-slate-700">Tips</Link>
+                            <Link href="/category/web-design" prefetch={false} className="block px-4 py-2.5 hover:bg-slate-50 hover:text-primary rounded-xl transition-colors font-medium text-slate-700">Web Design</Link>
                         </div>
                     </div>
 
-                    <Link href="/faq" prefetch={true} className="font-semibold text-slate-600 hover:text-primary transition-colors">FAQ</Link>
+                    <Link href="/faq" prefetch={false} className="font-semibold text-slate-600 hover:text-primary transition-colors">FAQ</Link>
                 </nav>
 
                 <button
@@ -62,11 +62,11 @@ const Header = () => {
             {/* Mobile Menu */}
             {isMenuOpen && (
                 <div className="lg:hidden absolute top-full left-0 w-full bg-white border-b border-slate-100 p-6 flex flex-col gap-4 animate-in slide-in-from-top duration-300">
-                    <Link href="/" className="font-bold text-primary text-lg" onClick={() => setIsMenuOpen(false)}>Home</Link>
-                    <Link href="/free-brand-logos" className="font-semibold text-slate-700 text-lg" onClick={() => setIsMenuOpen(false)}>Free Brand Logos</Link>
-                    <Link href="/royalty-free-music" className="font-semibold text-slate-700 text-lg" onClick={() => setIsMenuOpen(false)}>Royalty Free Music</Link>
-                    <Link href="/blog" className="font-semibold text-slate-700 text-lg" onClick={() => setIsMenuOpen(false)}>Blog</Link>
-                    <Link href="/faq" className="font-semibold text-slate-700 text-lg" onClick={() => setIsMenuOpen(false)}>FAQ</Link>
+                    <Link href="/" prefetch={false} className="font-bold text-primary text-lg" onClick={() => setIsMenuOpen(false)}>Home</Link>
+                    <Link href="/free-brand-logos" prefetch={false} className="font-semibold text-slate-700 text-lg" onClick={() => setIsMenuOpen(false)}>Free Brand Logos</Link>
+                    <Link href="/royalty-free-music" prefetch={false} className="font-semibold text-slate-700 text-lg" onClick={() => setIsMenuOpen(false)}>Royalty Free Music</Link>
+                    <Link href="/blog" prefetch={false} className="font-semibold text-slate-700 text-lg" onClick={() => setIsMenuOpen(false)}>Blog</Link>
+                    <Link href="/faq" prefetch={false} className="font-semibold text-slate-700 text-lg" onClick={() => setIsMenuOpen(false)}>FAQ</Link>
                 </div>
             )}
         </header>
