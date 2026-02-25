@@ -1,4 +1,4 @@
-export const dynamic = 'force-dynamic';
+export const revalidate = 3600;
 import { fetchREST, fetchRESTWithMeta } from '@/lib/rest';
 import Link from 'next/link';
 import LogoCard from '@/components/LogoCard';
@@ -33,13 +33,13 @@ export default async function LogoCollectionPaginated({ params }: { params: Prom
 
     try {
         // First find the collection ID by slug
-        const collections = await fetchREST(`logo-collection?slug=${slug}`);
+        const collections = await fetchREST(`logo-collection?slug=${slug}&_fields=id,name,description`);
         if (collections.length > 0) {
             const colId = collections[0].id;
             collectionName = collections[0].name;
             collectionDescription = collections[0].description || '';
-            // Then fetch logos with that collection (note it's wp: wpdmpro and logo CPT so map it accordingly if rest expects 'logo-collection' mapping)
-            const res = await fetchRESTWithMeta(`logo?logo-collection=${colId}&per_page=24&page=${page}&_embed`);
+            // Then fetch logos with that collection
+            const res = await fetchRESTWithMeta(`logo?logo-collection=${colId}&per_page=12&page=${page}&_embed&_fields=id,title,slug,_links,_embedded`);
             logos = res.data;
             totalPages = res.totalPages;
         }

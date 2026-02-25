@@ -30,7 +30,7 @@ interface WPPost {
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
     const { slug } = await params;
     try {
-        const categories: WPCategory[] = await fetchREST(`categories?slug=${slug}`);
+        const categories: WPCategory[] = await fetchREST(`categories?slug=${slug}&_fields=id,name,description`);
         if (categories && categories.length > 0) {
             const category = categories[0];
             return {

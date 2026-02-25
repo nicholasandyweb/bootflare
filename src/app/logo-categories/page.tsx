@@ -31,9 +31,9 @@ export default async function LogoCategoriesArchive() {
 
     try {
         const results = await Promise.allSettled([
-            fetchREST('logos?per_page=100&hide_empty=true'),
+            fetchREST('logos?per_page=100&hide_empty=true&_fields=id,name,slug,count'),
             fetchRankMathSEO('https://bootflare.com/logo-categories/'),
-            fetchREST('taxonomies/logos')
+            fetchREST('taxonomies/logos?_fields=name,description')
         ]);
 
         if (results[0].status === 'fulfilled') {

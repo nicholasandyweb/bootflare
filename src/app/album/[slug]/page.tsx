@@ -1,4 +1,4 @@
-export const dynamic = 'force-dynamic';
+export const revalidate = 3600;
 import { fetchREST } from '@/lib/rest';
 import Link from 'next/link';
 import { ChevronLeft, Play, Music, Headphones, Share2, Sparkles, Clock, Calendar, Download } from 'lucide-react';
@@ -54,7 +54,7 @@ export default async function SingleMusic({ params, searchParams }: { params: Pr
     let allTracks: Track[] = [];
 
     try {
-        const albums = await fetchREST(`sr_playlist?slug=${slug}&_embed`);
+        const albums = await fetchREST(`sr_playlist?slug=${slug}&_embed&_fields=id,title,content,date,slug,_links,_embedded`);
         if (albums.length > 0) {
             const fetchedAlbum = albums[0];
             album = fetchedAlbum;

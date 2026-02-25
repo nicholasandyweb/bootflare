@@ -27,9 +27,9 @@ export default async function LogoCollectionsArchive() {
 
     try {
         const results = await Promise.allSettled([
-            fetchREST('logo-collection?per_page=100&hide_empty=true'),
+            fetchREST('logo-collection?per_page=100&hide_empty=true&_fields=id,name,slug,count'),
             fetchRankMathSEO('https://bootflare.com/logo-collections/'),
-            fetchREST('taxonomies/logo-collection')
+            fetchREST('taxonomies/logo-collection?_fields=name,description')
         ]);
 
         if (results[0].status === 'fulfilled') {

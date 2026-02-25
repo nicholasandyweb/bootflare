@@ -1,4 +1,4 @@
-export const dynamic = 'force-dynamic';
+export const revalidate = 3600;
 import { fetchREST, fetchRESTWithMeta } from '@/lib/rest';
 import Link from 'next/link';
 import LogoCard from '@/components/LogoCard';
@@ -34,13 +34,13 @@ export default async function LogoCategoryPaginated({ params }: { params: Promis
 
     try {
         // First find the category ID by slug
-        const categories = await fetchREST(`logos?slug=${slug}`);
+        const categories = await fetchREST(`logos?slug=${slug}&_fields=id,name,description`);
         if (categories.length > 0) {
             const catId = categories[0].id;
             categoryName = categories[0].name;
             categoryDescription = categories[0].description || '';
             // Then fetch logos with that category
-            const res = await fetchRESTWithMeta(`logo?logos=${catId}&per_page=24&page=${page}&_embed`);
+            const res = await fetchRESTWithMeta(`logo?logos=${catId}&per_page=16&page=${page}&_embed&_fields=id,title,slug,_links,_embedded`);
             logos = res.data;
             totalPages = res.totalPages;
         }

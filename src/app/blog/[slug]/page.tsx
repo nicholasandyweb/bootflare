@@ -6,6 +6,8 @@ import Link from 'next/link';
 import { Metadata } from 'next';
 import { fetchRankMathSEO, mapRankMathToMetadata, mapWPToMetadata } from '@/lib/seo';
 
+import { cache } from 'react';
+
 export const dynamicParams = true;
 
 interface WPPost {
@@ -22,12 +24,16 @@ interface WPPost {
   };
 }
 
+const getPostBySlug = cache(async (slug: string) => {
+  const posts: WPPost[] = await fetchREST(`posts?slug=${slug}&_embed&_fields=id,title,content,excerpt,slug,date,_links,_embedded`);
+  return posts.length > 0 ? posts[0] : null;
+});
+
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
   try {
-    const posts: WPPost[] = await fetchREST(`posts?slug=${slug}&_embed&_fields=id,title,excerpt,slug,date,_links,_embedded`);
-    if (posts && posts.length > 0) {
-      const post = posts[0];
+    const post = await getPostBySlug(slug);
+    if (post) {
       // Try fetching precise RankMath tags first
       const seo = await fetchRankMathSEO(`https://bootflare.com/${slug}/`);
       if (seo) return mapRankMathToMetadata(seo);
@@ -46,10 +52,7 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
   let post: WPPost | null = null;
 
   try {
-    const posts: WPPost[] = await fetchREST(`posts?slug=${slug}&_embed&_fields=id,title,content,excerpt,slug,date,_links,_embedded`);
-    if (posts && posts.length > 0) {
-      post = posts[0];
-    }
+    post = await getPostBySlug(slug);
   } catch (error) {
     console.error('Error fetching post:', error);
   }
