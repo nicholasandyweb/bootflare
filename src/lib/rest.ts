@@ -20,7 +20,7 @@ export async function fetchREST(endpoint: string, retries = 2, namespace = 'wp/v
 
     for (let i = 0; i < retries; i++) {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 120000); // 120s timeout
+        const timeoutId = setTimeout(() => controller.abort(), 25000); // 25s timeout
 
         try {
             const res = await fetch(url, {
@@ -135,7 +135,7 @@ export async function fetchRESTWithMeta(endpoint: string, retries = 2, namespace
 
     for (let i = 0; i < retries; i++) {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 120000); // 120s timeout
+        const timeoutId = setTimeout(() => controller.abort(), 25000); // 25s timeout
 
         try {
             const res = await fetch(url, {

@@ -1,4 +1,3 @@
-export const dynamic = 'force-dynamic';
 export const revalidate = 3600;
 import { fetchREST, fetchRESTWithMeta } from '@/lib/rest';
 import { fetchGraphQL } from '@/lib/graphql';
