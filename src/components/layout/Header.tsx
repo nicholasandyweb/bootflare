@@ -31,8 +31,8 @@ const Header = () => {
                             Downloads <ChevronDown className="w-4 h-4" />
                         </button>
                         <div className="absolute hidden group-hover:block top-full left-0 bg-white shadow-2xl rounded-2xl p-3 min-w-[220px] border border-slate-100 animate-in fade-in slide-in-from-top-2">
-                            <Link href="/free-brand-logos" prefetch={false} className="block px-4 py-2.5 hover:bg-slate-50 hover:text-primary rounded-xl transition-colors font-medium text-slate-700">Free Brand Logos</Link>
-                            <Link href="/royalty-free-music" prefetch={false} className="block px-4 py-2.5 hover:bg-slate-50 hover:text-primary rounded-xl transition-colors font-medium text-slate-700">Royalty Free Music</Link>
+                            <Link href="/free-brand-logos" className="block px-4 py-2.5 hover:bg-slate-50 hover:text-primary rounded-xl transition-colors font-medium text-slate-700">Free Brand Logos</Link>
+                            <Link href="/royalty-free-music" className="block px-4 py-2.5 hover:bg-slate-50 hover:text-primary rounded-xl transition-colors font-medium text-slate-700">Royalty Free Music</Link>
                         </div>
                     </div>
 
@@ -41,10 +41,10 @@ const Header = () => {
                             Blog <ChevronDown className="w-4 h-4" />
                         </Link>
                         <div className="absolute hidden group-hover:block top-full left-0 bg-white shadow-2xl rounded-2xl p-3 min-w-[180px] border border-slate-100 animate-in fade-in slide-in-from-top-2">
-                            <Link href="/category/general" prefetch={false} className="block px-4 py-2.5 hover:bg-slate-50 hover:text-primary rounded-xl transition-colors font-medium text-slate-700">General</Link>
-                            <Link href="/category/tech" prefetch={false} className="block px-4 py-2.5 hover:bg-slate-50 hover:text-primary rounded-xl transition-colors font-medium text-slate-700">Tech</Link>
-                            <Link href="/category/tips" prefetch={false} className="block px-4 py-2.5 hover:bg-slate-50 hover:text-primary rounded-xl transition-colors font-medium text-slate-700">Tips</Link>
-                            <Link href="/category/web-design" prefetch={false} className="block px-4 py-2.5 hover:bg-slate-50 hover:text-primary rounded-xl transition-colors font-medium text-slate-700">Web Design</Link>
+                            <Link href="/category/general" className="block px-4 py-2.5 hover:bg-slate-50 hover:text-primary rounded-xl transition-colors font-medium text-slate-700">General</Link>
+                            <Link href="/category/tech" className="block px-4 py-2.5 hover:bg-slate-50 hover:text-primary rounded-xl transition-colors font-medium text-slate-700">Tech</Link>
+                            <Link href="/category/tips" className="block px-4 py-2.5 hover:bg-slate-50 hover:text-primary rounded-xl transition-colors font-medium text-slate-700">Tips</Link>
+                            <Link href="/category/web-design" className="block px-4 py-2.5 hover:bg-slate-50 hover:text-primary rounded-xl transition-colors font-medium text-slate-700">Web Design</Link>
                         </div>
                     </div>
 
