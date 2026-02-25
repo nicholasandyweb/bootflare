@@ -2,14 +2,13 @@ export const revalidate = 3600;
 import { cache } from 'react';
 import { fetchREST } from '@/lib/rest';
 import Link from 'next/link';
-import { Download, ChevronLeft, Flag } from 'lucide-react';
+import { Download, ChevronLeft, Flag, ExternalLink } from 'lucide-react';
 import { stripScripts } from '@/lib/sanitize';
 import { fetchRankMathSEO, mapRankMathToMetadata, mapWPToMetadata } from '@/lib/seo';
 import LogoSearch from '@/components/LogoSearch';
+import LogoCard from '@/components/LogoCard';
 import CategoryList from '@/components/CategoryList';
-import RelatedLogos from '@/components/RelatedLogos';
 import { Metadata } from 'next';
-import { Suspense } from 'react';
 
 // Rendered on-demand via Cloudflare's edge network on every request.
 export const dynamicParams = true;
@@ -52,6 +51,8 @@ interface Logo {
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
     const { slug } = await params;
     try {
+        // Fetch SEO and logo data in parallel — both are needed and independent.
+        // getLogoBySlug uses React cache() so the page body won't re-fetch it.
         const [rankMathSeo, logo] = await Promise.all([
             fetchRankMathSEO(`https://bootflare.com/logo/${slug}/`),
             getLogoBySlug(slug),
@@ -65,11 +66,58 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     return { title: 'Logo Not Found | Bootflare' };
 }
 
+
+async function getRelatedLogos(logo: Logo) {
+    try {
+        // Step 1: Try fetching from Contextual Related Posts (CRP) plugin
+        const crpResults: { id?: number; ID?: number }[] = await fetchREST(`posts/${logo.id}`, 3, 'contextual-related-posts/v1');
+
+        if (crpResults && crpResults.length > 0) {
+            // Deduplicate IDs and exclude the current logo
+            const relatedIds = Array.from(new Set(
+                crpResults.map(item => item.id || item.ID).filter(id => id && id !== logo.id)
+            ));
+
+            if (relatedIds.length > 0) {
+                // Fetch full logo objects with embedding for the IDs returned by CRP
+                const crpLogos = await fetchREST(`logo?include=${relatedIds.join(',')}&_embed&per_page=4&_fields=id,title,slug,_links,_embedded`);
+                if (crpLogos && crpLogos.length > 0) {
+                    return crpLogos as Logo[];
+                }
+            }
+        }
+
+        // Step 2: Fallback to existing logic if CRP is empty or fails
+        const allTerms = logo._embedded?.['wp:term']?.flat() || [];
+        const categoryIds = allTerms.map(term => term.id);
+        const searchContext = logo.title.rendered.replace(/Logo/gi, '').trim();
+
+        // Search globally for the context
+        let related = await fetchREST(`logo?search=${encodeURIComponent(searchContext)}&per_page=4&exclude=${logo.id}&_embed&_fields=id,title,slug,_links,_embedded`);
+
+        // Fallback to same-category latest
+        if (!related || related.length < 4) {
+            const categoryFilter = categoryIds.length > 0 ? `&logos=${categoryIds.join(',')}` : '';
+            const fallback = await fetchREST(`logo?per_page=4&exclude=${logo.id}${categoryFilter}&_embed&_fields=id,title,slug,_links,_embedded`);
+            related = fallback;
+        }
+
+        // Final safety check: filter out duplicates in the returned array
+        const finalRelated = Array.from(new Map(related.map((item: any) => [item.id, item])).values());
+        return (finalRelated as Logo[]).slice(0, 4);
+    } catch (error) {
+        console.error('Error fetching related logos:', error);
+        return [];
+    }
+}
+
 export default async function SingleLogo({ params }: { params: Promise<{ slug: string }> }) {
     const { slug } = await params;
     let logo: Logo | null = null;
 
     try {
+        // getLogoBySlug is wrapped in React cache() — if generateMetadata already
+        // fetched this slug, this returns the cached result with no extra WP call.
         logo = await getLogoBySlug(slug);
     } catch (error) {
         console.error('Error fetching logo:', error);
@@ -87,10 +135,15 @@ export default async function SingleLogo({ params }: { params: Promise<{ slug: s
     }
 
     const featuredImage = logo._embedded?.['wp:featuredmedia']?.[0]?.source_url;
+
+    // Find custom logo categories (usually in index 1 since index 0 is empty for standard categories)
     const allTerms = logo._embedded?.['wp:term']?.flat() || [];
     const categories = allTerms.filter(term => term.taxonomy === 'logo_category' || term.link?.includes('/logos/category/'));
+    // Fallback if taxonomy isn't explicitly defined
     const finalCategories = categories.length > 0 ? categories : (logo._embedded?.['wp:term']?.[1] || []);
+
     const sanitizedContent = stripScripts(logo.content.rendered);
+    const relatedLogos = await getRelatedLogos(logo);
 
     return (
         <div suppressHydrationWarning className="bg-slate-50 min-h-screen">
@@ -116,6 +169,8 @@ export default async function SingleLogo({ params }: { params: Promise<{ slug: s
                         <span className="text-slate-700 truncate max-w-[200px] sm:max-w-none">{logo.title.rendered}</span>
                     </div>
 
+
+
                     <div className="max-w-xl mx-auto">
                         <LogoSearch />
                     </div>
@@ -124,6 +179,7 @@ export default async function SingleLogo({ params }: { params: Promise<{ slug: s
 
             <div className="container py-16 px-6 max-w-5xl mx-auto">
                 <div className="flex flex-col gap-12 text-center">
+                    {/* Logo Preview Section */}
                     <div className="flex justify-center">
                         <div className="logobox flex items-center justify-center p-8 md:p-12 mb-8">
                             <img
@@ -193,26 +249,22 @@ export default async function SingleLogo({ params }: { params: Promise<{ slug: s
                     </div>
                 </div>
 
-                {/* Related Logos Section (Streamed) */}
-                <Suspense fallback={
-                    <div className="mt-32 animate-pulse">
-                        <div className="h-10 w-64 bg-slate-200 rounded-xl mx-auto mb-12" />
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-                            {[...Array(4)].map((_, i) => (
-                                <div key={i} className="aspect-square bg-white border border-slate-100 rounded-[2rem] p-6 shadow-sm">
-                                    <div className="w-full h-full bg-slate-50 rounded-2xl" />
-                                </div>
+                {/* Related Logos Section */}
+                {relatedLogos.length > 0 && (
+                    <div className="mt-32">
+                        <div className="text-center mb-12">
+                            <h2 className="text-3xl font-bold text-gray-900">You may also like</h2>
+                        </div>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
+                            {relatedLogos.map((item) => (
+                                <LogoCard key={item.id} logo={item} />
                             ))}
                         </div>
                     </div>
-                }>
-                    <RelatedLogos logo={logo} />
-                </Suspense>
+                )}
 
-                {/* Main Category List (Streamed) */}
-                <Suspense fallback={<div className="h-40 bg-slate-100 rounded-[3rem] animate-pulse mt-24" />}>
-                    <CategoryList />
-                </Suspense>
+                {/* Main Category List at the bottom */}
+                <CategoryList />
             </div>
         </div>
     );

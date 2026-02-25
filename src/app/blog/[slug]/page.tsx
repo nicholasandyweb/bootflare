@@ -32,13 +32,15 @@ const getPostBySlug = cache(async (slug: string) => {
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
   try {
-    const [post, seo] = await Promise.all([
-      getPostBySlug(slug),
-      fetchRankMathSEO(`https://bootflare.com/${slug}/`)
-    ]);
+    const post = await getPostBySlug(slug);
+    if (post) {
+      // Try fetching precise RankMath tags first
+      const seo = await fetchRankMathSEO(`https://bootflare.com/${slug}/`);
+      if (seo) return mapRankMathToMetadata(seo);
 
-    if (seo) return mapRankMathToMetadata(seo);
-    if (post) return mapWPToMetadata(post, 'Blog | Bootflare');
+      // Fallback
+      return mapWPToMetadata(post, 'Blog | Bootflare');
+    }
   } catch (error) {
     console.error('Error generating metadata for blog post:', error);
   }
