@@ -1,4 +1,4 @@
-export const revalidate = 3600;
+export const dynamic = 'force-dynamic';
 import { fetchRESTWithMeta } from '@/lib/rest';
 import Link from 'next/link';
 import { Metadata } from 'next';

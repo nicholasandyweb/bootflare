@@ -1,4 +1,4 @@
-export const revalidate = 3600;
+export const dynamic = 'force-dynamic';
 import { fetchREST } from '@/lib/rest';
 import HomeClient from '@/components/HomeClient';
 import { fetchRankMathSEO, mapRankMathToMetadata } from '@/lib/seo';

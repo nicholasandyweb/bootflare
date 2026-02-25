@@ -1,4 +1,4 @@
-export const revalidate = 3600;
+export const dynamic = 'force-dynamic';
 import { fetchGraphQL } from '@/lib/graphql';
 import { stripScripts } from '@/lib/sanitize';
 import { ChevronRight, MessageCircle, Sparkles, HelpCircle } from 'lucide-react';
