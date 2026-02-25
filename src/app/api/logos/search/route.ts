@@ -13,8 +13,11 @@ export async function GET(request: Request) {
     try {
         const logos = await fetchREST(`logo?search=${encodeURIComponent(query)}&per_page=50&_embed`);
 
+        // Deduplicate results by ID
+        const uniqueLogos = Array.from(new Map(logos.map((item: any) => [item.id, item])).values());
+
         // Improve relevance: Sort results to prioritize exact matches and "starts with" matches
-        const sortedLogos = [...logos].sort((a, b) => {
+        const sortedLogos = uniqueLogos.sort((a: any, b: any) => {
             const aTitle = a.title.rendered.toLowerCase();
             const bTitle = b.title.rendered.toLowerCase();
             const q = query.toLowerCase();

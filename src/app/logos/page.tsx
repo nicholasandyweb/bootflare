@@ -54,7 +54,8 @@ export default async function LogoArchive({ searchParams }: { searchParams: Prom
       ? `logo?search=${encodeURIComponent(searchTerm)}&per_page=24&page=${page}&_embed`
       : `logo?per_page=24&page=${page}&_embed`;
     const res = await fetchRESTWithMeta(endpoint);
-    logos = res.data;
+    // Deduplicate by ID
+    logos = Array.from(new Map(res.data.map((item: any) => [item.id, item])).values()) as Logo[];
     totalPages = res.totalPages;
   } catch (error) {
     console.error('Error fetching logos:', error);

@@ -59,8 +59,9 @@ export default async function LogoCategoriesArchive() {
 
     const pageTitle = taxonomyMeta?.name || 'Logo Categories';
 
-    // Ensure we only show categories that actually contain logos
-    const activeCategories = (categories || []).filter(cat => cat.count > 0);
+    // Ensure we only show categories that actually contain logos and are unique by name/ID
+    const uniqueCategories = Array.from(new Map(categories.map(cat => [cat.id, cat])).values());
+    const activeCategories = uniqueCategories.filter(cat => cat.count > 0);
 
     return (
         <div className="bg-slate-50 min-h-screen">

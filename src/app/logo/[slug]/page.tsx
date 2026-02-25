@@ -73,7 +73,11 @@ async function getRelatedLogos(logo: Logo) {
         const crpResults: { id?: number; ID?: number }[] = await fetchREST(`posts/${logo.id}`, 3, 'contextual-related-posts/v1');
 
         if (crpResults && crpResults.length > 0) {
-            const relatedIds = crpResults.map(item => item.id || item.ID).filter(Boolean);
+            // Deduplicate IDs and exclude the current logo
+            const relatedIds = Array.from(new Set(
+                crpResults.map(item => item.id || item.ID).filter(id => id && id !== logo.id)
+            ));
+
             if (relatedIds.length > 0) {
                 // Fetch full logo objects with embedding for the IDs returned by CRP
                 const crpLogos = await fetchREST(`logo?include=${relatedIds.join(',')}&_embed&per_page=4&_fields=id,title,slug,_links,_embedded`);
@@ -98,7 +102,9 @@ async function getRelatedLogos(logo: Logo) {
             related = fallback;
         }
 
-        return related as Logo[];
+        // Final safety check: filter out duplicates in the returned array
+        const finalRelated = Array.from(new Map(related.map((item: any) => [item.id, item])).values());
+        return (finalRelated as Logo[]).slice(0, 4);
     } catch (error) {
         console.error('Error fetching related logos:', error);
         return [];

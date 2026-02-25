@@ -53,8 +53,9 @@ export default async function LogoCollectionsArchive() {
 
     const pageTitle = taxonomyMeta?.name || 'Logo Collections';
 
-    // Ensure we only show collections that actually contain logos
-    const activeCollections = (collections || []).filter(col => col.count > 0);
+    // Ensure we only show collections that actually contain logos and are unique by name/ID
+    const uniqueCollections = Array.from(new Map(collections.map(col => [col.id, col])).values());
+    const activeCollections = uniqueCollections.filter(col => col.count > 0);
 
     return (
         <div className="bg-slate-50 min-h-screen">

@@ -27,9 +27,9 @@ interface WPPost {
 export default async function BlogPage() {
   let posts: WPPost[] = [];
   try {
-    posts = await fetchREST('posts?_embed&per_page=8&_fields=id,title,slug,excerpt,date,_links,_embedded');
-    if (!Array.isArray(posts)) {
-      posts = [];
+    const res = await fetchREST('posts?_embed&per_page=8&_fields=id,title,slug,excerpt,date,_links,_embedded');
+    if (Array.isArray(res)) {
+      posts = Array.from(new Map(res.map((item: any) => [item.id, item])).values()) as WPPost[];
     }
   } catch (error) {
     console.error('Error fetching posts:', error);
