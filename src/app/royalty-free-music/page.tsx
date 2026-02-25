@@ -51,7 +51,7 @@ export default async function RoyaltyFreeMusicArchive({ searchParams }: { search
 
   try {
     const [res, data, seo] = await Promise.all([
-      fetchRESTWithMeta(`sr_playlist?per_page=12&page=${page}&_embed`),
+      fetchRESTWithMeta(`sr_playlist?per_page=12&page=${page}&_embed&_fields=id,title,slug,excerpt,_links,_embedded`),
       fetchGraphQL<WPData>(GET_PAGE_DATA),
       fetchRankMathSEO('https://bootflare.com/royalty-free-music/')
     ]);

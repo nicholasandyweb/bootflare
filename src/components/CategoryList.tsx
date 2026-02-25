@@ -13,7 +13,7 @@ export default async function CategoryList() {
     let categories: LogoCategory[] = [];
 
     try {
-        categories = await fetchREST('logos?per_page=100&hide_empty=true');
+        categories = await fetchREST('logos?per_page=100&hide_empty=true&_fields=id,name,slug,count');
     } catch (error) {
         console.error('Error fetching logo categories:', error);
     }
@@ -34,6 +34,7 @@ export default async function CategoryList() {
                     <Link
                         key={cat.id}
                         href={`/logos/${cat.slug}`}
+                        prefetch={true}
                         className="block bg-white border border-pink-100 rounded-2xl px-6 py-5 text-center shadow-[0_4px_20px_-4px_rgba(252,231,243,0.5)] hover:border-primary/30 hover:shadow-md hover:-translate-y-1 transition-all duration-300"
                     >
                         <h3 className="font-bold text-slate-900 text-[15px] mb-1.5 leading-tight">{cat.name}</h3>

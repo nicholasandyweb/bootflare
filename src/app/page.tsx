@@ -17,8 +17,8 @@ export default async function Home() {
 
   try {
     const [logos, music] = await Promise.all([
-      fetchREST('logo?per_page=20'),
-      fetchREST('sr_playlist?per_page=12')
+      fetchREST('logo?per_page=3&_fields=id,_links&_embed=wp:featuredmedia'),
+      fetchREST('sr_playlist?per_page=3&_fields=id,_links&_embed=wp:featuredmedia')
     ]);
 
     logoImages = logos.map((item: { _embedded?: { 'wp:featuredmedia'?: { source_url: string }[] } }) =>

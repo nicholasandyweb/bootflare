@@ -56,7 +56,7 @@ export default async function FreeBrandLogosPage({ searchParams }: { searchParam
 
     try {
         const [logosRes, pageData, seo] = await Promise.all([
-            fetchRESTWithMeta(`logo?per_page=24&page=${page}&_embed`),
+            fetchRESTWithMeta(`logo?per_page=12&page=${page}&_embed&_fields=id,title,slug,_links,_embedded`),
             fetchGraphQL<{ page: WPPage }>(GET_FREE_LOGOS_PAGE),
             fetchRankMathSEO('https://bootflare.com/free-brand-logos/')
         ]);

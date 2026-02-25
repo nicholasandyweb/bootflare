@@ -1,10 +1,12 @@
 import { GraphQLClient } from 'graphql-request';
 
-const endpoint = process.env.WORDPRESS_GRAPHQL_ENDPOINT || 'https://bootflare.com/graphql';
+const WP_GRAPHQL_URL = 'https://bootflare.com/graphql';
+const endpoint = process.env.WORDPRESS_GRAPHQL_ENDPOINT || WP_GRAPHQL_URL;
 
 export const client = new GraphQLClient(endpoint, {
   headers: {
-    // Add any necessary headers like authorization if required
+    'Content-Type': 'application/json',
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
   },
 });
 

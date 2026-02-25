@@ -71,7 +71,11 @@ export async function fetchRankMathSEO(postUrl: string): Promise<RankMathSEO | n
     try {
         const apiUrl = `${WP_URL}/wp-json/rankmath/v1/getHead?url=${encodeURIComponent(postUrl)}`;
         const res = await fetch(apiUrl, {
-            next: { revalidate: 3600 }, // Cache on edge for 1 hour
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept': 'application/json'
+            },
+            next: { revalidate: 3600 } // Cache SEO data
         });
         if (!res.ok) return null;
 

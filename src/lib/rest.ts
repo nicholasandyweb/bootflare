@@ -1,23 +1,45 @@
 const WP_URL = 'https://bootflare.com';
 
+// Development-only in-memory cache to prevent "minutes of loading" during local testing
+const devCache = new Map<string, { data: any; timestamp: number }>();
+const CACHE_TTL = 10 * 60 * 1000; // 10 minutes
+
 export async function fetchREST(endpoint: string, retries = 2, namespace = 'wp/v2') {
     const separator = endpoint.includes('?') ? '&' : '?';
     const embedParam = endpoint.includes('_embed') ? '' : `${separator}_embed`;
     const baseUrl = endpoint.startsWith('http') ? endpoint : `${WP_URL}/wp-json/${namespace}/${endpoint}${embedParam}`;
     const url = baseUrl;
 
+    // Check dev cache first
+    if (process.env.NODE_ENV === 'development') {
+        const cached = devCache.get(url);
+        if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+            return cached.data;
+        }
+    }
+
     for (let i = 0; i < retries; i++) {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
+        const timeoutId = setTimeout(() => controller.abort(), 120000); // 120s timeout
 
         try {
             const res = await fetch(url, {
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'Accept': 'application/json'
+                },
                 next: { revalidate: 3600 }, // Cache on edge for 1 hour
                 signal: controller.signal
             });
             clearTimeout(timeoutId);
 
-            if (res.status === 429 || res.status === 503 || res.status === 502 || res.status === 504) {
+            if (res.status === 504 || res.status === 524) {
+                // Gateway timeout: WordPress is too slow, don't bother retrying
+                console.error(`Link fetch timed out at gateway (504/524): ${url}`);
+                return [];
+            }
+
+            if (res.status === 429 || res.status === 503 || res.status === 502) {
                 // Rate limited or server error, wait and retry
                 const waitTime = Math.min(Math.pow(2, i) * 3000, 60000); // Max 60s
                 console.warn(`Retry ${i + 1}/${retries} for ${url} after ${waitTime}ms (Status: ${res.status})`);
@@ -66,7 +88,12 @@ export async function fetchREST(endpoint: string, retries = 2, namespace = 'wp/v
 
             const jsonText = text.substring(start, end + 1);
             try {
-                return JSON.parse(jsonText);
+                const data = JSON.parse(jsonText);
+                // Save to dev cache
+                if (process.env.NODE_ENV === 'development') {
+                    devCache.set(url, { data, timestamp: Date.now() });
+                }
+                return data;
             } catch (e) {
                 console.error(`Status: ${res.status} ${res.statusText}`);
                 console.error(`Failed to parse JSON for ${url}. Response starts with: ${text.substring(0, 100)}`);
@@ -74,6 +101,12 @@ export async function fetchREST(endpoint: string, retries = 2, namespace = 'wp/v
                 continue;
             }
         } catch (error) {
+            const isTimeout = error instanceof Error && (error.name === 'AbortError' || error.message.includes('aborted'));
+            if (isTimeout) {
+                console.error(`Fetch timed out after 120s for ${url}. Failing fast to avoid loop.`);
+                return []; // Fail fast on timeout
+            }
+
             if (i === retries - 1) {
                 console.error(`Error fetching from REST API after ${retries} attempts (${url}):`, error);
                 return [];
@@ -92,18 +125,36 @@ export async function fetchRESTWithMeta(endpoint: string, retries = 2, namespace
     const baseUrl = endpoint.startsWith('http') ? endpoint : `${WP_URL}/wp-json/${namespace}/${endpoint}${embedParam}`;
     const url = baseUrl;
 
+    // Check dev cache first
+    if (process.env.NODE_ENV === 'development') {
+        const cached = devCache.get(url);
+        if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+            return cached.data;
+        }
+    }
+
     for (let i = 0; i < retries; i++) {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
+        const timeoutId = setTimeout(() => controller.abort(), 120000); // 120s timeout
 
         try {
             const res = await fetch(url, {
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'Accept': 'application/json'
+                },
                 next: { revalidate: 3600 }, // Cache on edge for 1 hour
                 signal: controller.signal
             });
             clearTimeout(timeoutId);
 
-            if (res.status === 429 || res.status === 503 || res.status === 502 || res.status === 504) {
+            if (res.status === 504 || res.status === 524) {
+                // Gateway timeout: WordPress is too slow, don't bother retrying
+                console.error(`Link fetch timed out at gateway (504/524): ${url}`);
+                return { data: [], totalPages: 1, totalItems: 0 };
+            }
+
+            if (res.status === 429 || res.status === 503 || res.status === 502) {
                 // Rate limited or server error, wait and retry
                 const waitTime = Math.min(Math.pow(2, i) * 3000, 60000); // Max 60s
                 console.warn(`Retry ${i + 1}/${retries} for ${url} after ${waitTime}ms (Status: ${res.status})`);
@@ -157,7 +208,13 @@ export async function fetchRESTWithMeta(endpoint: string, retries = 2, namespace
 
             const jsonText = text.substring(start, end + 1);
             try {
-                return { data: JSON.parse(jsonText), totalPages, totalItems };
+                const data = JSON.parse(jsonText);
+                const result = { data, totalPages, totalItems };
+                // Save to dev cache
+                if (process.env.NODE_ENV === 'development') {
+                    devCache.set(url, { data: result, timestamp: Date.now() });
+                }
+                return result;
             } catch (e) {
                 console.error(`Status: ${res.status} ${res.statusText}`);
                 console.error(`Failed to parse JSON for ${url}. Response starts with: ${text.substring(0, 100)}`);
@@ -165,6 +222,12 @@ export async function fetchRESTWithMeta(endpoint: string, retries = 2, namespace
                 continue;
             }
         } catch (error) {
+            const isTimeout = error instanceof Error && (error.name === 'AbortError' || error.message.includes('aborted'));
+            if (isTimeout) {
+                console.error(`Fetch timed out after 120s for ${url}. Failing fast to avoid loop.`);
+                return { data: [], totalPages: 1, totalItems: 0 }; // Fail fast on timeout
+            }
+
             if (i === retries - 1) {
                 console.error(`Error fetching from REST API after ${retries} attempts (${url}):`, error);
                 return { data: [], totalPages: 1, totalItems: 0 };

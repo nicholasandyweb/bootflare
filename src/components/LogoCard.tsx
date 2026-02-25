@@ -23,6 +23,7 @@ export default function LogoCard({ logo }: LogoCardProps) {
         <div className="group relative">
             <Link
                 href={`/logo/${logo.slug}`}
+                prefetch={true}
                 className="card-premium !p-0 aspect-square flex flex-col items-center justify-center gap-2 overflow-hidden bg-white hover:!border-primary/20"
             >
                 <div className="flex-1 min-h-0 w-full flex items-center justify-center p-6">

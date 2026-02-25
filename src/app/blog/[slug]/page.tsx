@@ -1,46 +1,39 @@
-export const dynamic = 'force-dynamic';
-import { fetchGraphQL } from '@/lib/graphql';
+export const revalidate = 3600;
+import { fetchREST } from '@/lib/rest';
 import { stripScripts } from '@/lib/sanitize';
 import { Calendar, User, ArrowLeft, Share2, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { Metadata } from 'next';
-import { mapWPToMetadata } from '@/lib/seo';
+import { fetchRankMathSEO, mapRankMathToMetadata, mapWPToMetadata } from '@/lib/seo';
 
 export const dynamicParams = true;
 
-const GET_SINGLE_POST = `
-  query GetSinglePost($slug: ID!) {
-    post(id: $slug, idType: SLUG) {
-      title
-      content
-      excerpt
-      date
-      featuredImage {
-        node {
-          sourceUrl
-        }
-      }
-      author {
-        node {
-          name
-        }
-      }
-      categories {
-        nodes {
-          name
-          slug
-        }
-      }
-    }
-  }
-`;
+interface WPPost {
+  id: number;
+  title: { rendered: string };
+  content: { rendered: string };
+  excerpt: { rendered: string };
+  slug: string;
+  date: string;
+  _embedded?: {
+    'wp:featuredmedia'?: { source_url: string }[];
+    'wp:term'?: { taxonomy: string; name: string; slug: string }[][];
+    author?: { name: string }[];
+  };
+}
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
   try {
-    const data = await fetchGraphQL<{ post: Post }>(GET_SINGLE_POST, { slug });
-    if (data.post) {
-      return mapWPToMetadata(data.post, 'Blog - Bootflare');
+    const posts: WPPost[] = await fetchREST(`posts?slug=${slug}&_embed&_fields=id,title,excerpt,slug,date,_links,_embedded`);
+    if (posts && posts.length > 0) {
+      const post = posts[0];
+      // Try fetching precise RankMath tags first
+      const seo = await fetchRankMathSEO(`https://bootflare.com/${slug}/`);
+      if (seo) return mapRankMathToMetadata(seo);
+
+      // Fallback
+      return mapWPToMetadata(post, 'Blog | Bootflare');
     }
   } catch (error) {
     console.error('Error generating metadata for blog post:', error);
@@ -48,36 +41,15 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   return { title: 'Post Not Found | Bootflare' };
 }
 
-interface Post {
-  title: string;
-  content: string;
-  excerpt?: string;
-  date: string;
-  featuredImage?: {
-    node: {
-      sourceUrl: string;
-    }
-  };
-  author?: {
-    node: {
-      name: string;
-    }
-  };
-  categories: {
-    nodes: {
-      name: string;
-      slug: string;
-    }[]
-  };
-}
-
-
 export default async function BlogPost({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  let post: Post | null = null;
+  let post: WPPost | null = null;
+
   try {
-    const data: { post: Post } = await fetchGraphQL(GET_SINGLE_POST, { slug });
-    post = data.post;
+    const posts: WPPost[] = await fetchREST(`posts?slug=${slug}&_embed&_fields=id,title,content,excerpt,slug,date,_links,_embedded`);
+    if (posts && posts.length > 0) {
+      post = posts[0];
+    }
   } catch (error) {
     console.error('Error fetching post:', error);
   }
@@ -86,22 +58,34 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
     return <div className="container py-32 text-center text-slate-500">Post not found</div>;
   }
 
-  const sanitizedContent = stripScripts(post.content);
+  const sanitizedContent = stripScripts(post.content.rendered);
+
+  // Extract categories safely from WP REST _embedded terms
+  const terms = post._embedded?.['wp:term'] || [];
+  const categories: { name: string, slug: string }[] = [];
+  for (const taxonomyList of terms) {
+    for (const term of taxonomyList) {
+      if (term.taxonomy === 'category') {
+        categories.push({ name: term.name, slug: term.slug });
+      }
+    }
+  }
+
+  const authorName = post._embedded?.author?.[0]?.name || "Bootflare Editorial";
+  const featuredImage = post._embedded?.['wp:featuredmedia']?.[0]?.source_url;
 
   return (
     <article className="bg-white min-h-screen pb-20" suppressHydrationWarning>
-
-
       <div className="container pt-20 pb-16">
-        <Link href="/blog" className="inline-flex items-center gap-2 text-slate-500 hover:text-primary transition-colors font-bold mb-12 group">
+        <Link href="/blog" prefetch={true} className="inline-flex items-center gap-2 text-slate-500 hover:text-primary transition-colors font-bold mb-12 group">
           <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" /> Back to Insights
         </Link>
 
         <div className="max-w-4xl mx-auto">
           {/* Meta */}
           <div className="flex flex-wrap items-center gap-4 mb-8">
-            {post.categories.nodes.map(cat => (
-              <Link key={cat.slug} href={`/category/${cat.slug}`} className="text-[10px] font-bold text-primary uppercase tracking-widest px-3 py-1 bg-primary/10 rounded-full hover:bg-primary hover:text-white transition-all">
+            {categories.map(cat => (
+              <Link key={cat.slug} href={`/category/${cat.slug}`} prefetch={true} className="text-[10px] font-bold text-primary uppercase tracking-widest px-3 py-1 bg-primary/10 rounded-full hover:bg-primary hover:text-white transition-all">
                 {cat.name}
               </Link>
             ))}
@@ -115,13 +99,14 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
             </div>
           </div>
 
-          <h1 className="text-4xl md:text-6xl font-bold mb-12 leading-tight text-slate-900 font-ubuntu">
-            {post.title}
-          </h1>
+          <h1
+            className="text-4xl md:text-6xl font-bold mb-12 leading-tight text-slate-900 font-ubuntu"
+            dangerouslySetInnerHTML={{ __html: post.title.rendered }}
+          />
 
-          {post.featuredImage && (
+          {featuredImage && (
             <div className="mb-20 rounded-[3rem] overflow-hidden shadow-2xl shadow-slate-200 border-8 border-white ring-1 ring-slate-100">
-              <img src={post.featuredImage.node.sourceUrl} alt={post.title} className="w-full h-auto" />
+              <img src={featuredImage} alt={post.title.rendered} className="w-full h-auto" />
             </div>
           )}
 
@@ -148,9 +133,11 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
                 <div className="p-8 rounded-[2rem] bg-slate-50 border border-slate-100">
                   <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-6">Published By</h4>
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-full bg-slate-200" />
+                    <div className="w-12 h-12 rounded-full bg-slate-200 flex items-center justify-center text-slate-400">
+                      <User className="w-6 h-6" />
+                    </div>
                     <div>
-                      <p className="font-bold text-slate-900">{post.author?.node?.name || "Andy"}</p>
+                      <p className="font-bold text-slate-900">{authorName}</p>
                       <p className="text-xs text-slate-500">Editorial Team</p>
                     </div>
                   </div>

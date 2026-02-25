@@ -17,7 +17,7 @@ export const dynamicParams = true;
 // generateMetadata and the page body both call getLogoBySlug(slug)
 // but WordPress is only hit once.
 const getLogoBySlug = cache(async (slug: string) => {
-    const logos = await fetchREST(`logo?slug=${slug}&_embed`);
+    const logos = await fetchREST(`logo?slug=${slug}&_embed&_fields=id,title,content,slug,excerpt,_links,_embedded`);
     return logos.length > 0 ? (logos[0] as Logo) : null;
 });
 
@@ -76,7 +76,7 @@ async function getRelatedLogos(logo: Logo) {
             const relatedIds = crpResults.map(item => item.id || item.ID).filter(Boolean);
             if (relatedIds.length > 0) {
                 // Fetch full logo objects with embedding for the IDs returned by CRP
-                const crpLogos = await fetchREST(`logo?include=${relatedIds.join(',')}&_embed`);
+                const crpLogos = await fetchREST(`logo?include=${relatedIds.join(',')}&_embed&per_page=4&_fields=id,title,slug,_links,_embedded`);
                 if (crpLogos && crpLogos.length > 0) {
                     return crpLogos as Logo[];
                 }
@@ -89,12 +89,12 @@ async function getRelatedLogos(logo: Logo) {
         const searchContext = logo.title.rendered.replace(/Logo/gi, '').trim();
 
         // Search globally for the context
-        let related = await fetchREST(`logo?search=${encodeURIComponent(searchContext)}&per_page=8&exclude=${logo.id}&_embed`);
+        let related = await fetchREST(`logo?search=${encodeURIComponent(searchContext)}&per_page=4&exclude=${logo.id}&_embed&_fields=id,title,slug,_links,_embedded`);
 
         // Fallback to same-category latest
         if (!related || related.length < 4) {
             const categoryFilter = categoryIds.length > 0 ? `&logos=${categoryIds.join(',')}` : '';
-            const fallback = await fetchREST(`logo?per_page=8&exclude=${logo.id}${categoryFilter}&_embed`);
+            const fallback = await fetchREST(`logo?per_page=4&exclude=${logo.id}${categoryFilter}&_embed&_fields=id,title,slug,_links,_embedded`);
             related = fallback;
         }
 
