@@ -19,15 +19,18 @@ export default function Pagination({ currentPage, totalPages, baseUrl, usePathBa
             return `${cleanBase}/`;
         }
 
-        // If query parameters exist, we have to properly append page=
-        // Using a dummy URL to safely evaluate search params if baseUrl has a relative path
-        const urlObj = new URL(baseUrl, 'http://localhost');
+        // Efficient URL building
+        const cleanBase = baseUrl.split('?')[0];
+        const searchParams = new URLSearchParams(baseUrl.includes('?') ? baseUrl.split('?')[1] : '');
+
         if (pageNumber > 1) {
-            urlObj.searchParams.set('page', pageNumber.toString());
+            searchParams.set('page', pageNumber.toString());
         } else {
-            urlObj.searchParams.delete('page');
+            searchParams.delete('page');
         }
-        return urlObj.pathname + urlObj.search;
+
+        const qs = searchParams.toString();
+        return cleanBase + (qs ? `?${qs}` : '');
     };
 
     const getPages = () => {

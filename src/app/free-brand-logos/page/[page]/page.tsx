@@ -1,7 +1,7 @@
 export const revalidate = 3600;
 import LogosTemplate from '@/components/LogosTemplate';
-import { Metadata } from 'next';
 import { fetchRankMathSEO, mapRankMathToMetadata } from '@/lib/seo';
+import { Metadata } from 'next';
 
 export async function generateMetadata(): Promise<Metadata> {
     const seo = await fetchRankMathSEO('https://bootflare.com/free-brand-logos/');
@@ -9,10 +9,13 @@ export async function generateMetadata(): Promise<Metadata> {
     return { title: 'Free Brand Logos | Bootflare' };
 }
 
-export default function FreeBrandLogosPage() {
+export default async function FreeLogosPaginated({ params }: { params: Promise<{ page: string }> }) {
+    const { page: pageStr } = await params;
+    const page = parseInt(pageStr, 10);
+
     return (
         <LogosTemplate
-            page={1}
+            page={page}
             route="/free-brand-logos"
             queryId="/free-brand-logos/"
             seoUrl="https://bootflare.com/free-brand-logos/"
