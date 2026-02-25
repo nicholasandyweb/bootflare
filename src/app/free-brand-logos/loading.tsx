@@ -51,8 +51,6 @@ export default function FreeBrandLogosLoading() {
                         </div>
                     </div>
 
-                    {/* Categories UI loads instantly as client component, so we just drop it in */}
-                    <CategoryList />
                 </section>
             </div>
         </div>
