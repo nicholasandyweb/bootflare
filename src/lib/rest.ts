@@ -3,6 +3,7 @@ const WP_URL = 'https://bootflare.com';
 // Development-only in-memory cache to prevent "minutes of loading" during local testing
 const devCache = new Map<string, { data: any; timestamp: number }>();
 const CACHE_TTL = 10 * 60 * 1000; // 10 minutes
+const FETCH_TIMEOUT = process.env.NODE_ENV === 'development' ? 120000 : 45000; // 120s dev, 45s prod
 
 export async function fetchREST(endpoint: string, retries = 2, namespace = 'wp/v2') {
     const separator = endpoint.includes('?') ? '&' : '?';
@@ -20,7 +21,7 @@ export async function fetchREST(endpoint: string, retries = 2, namespace = 'wp/v
 
     for (let i = 0; i < retries; i++) {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 25000); // 25s timeout
+        const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT);
 
         try {
             const res = await fetch(url, {
@@ -45,7 +46,7 @@ export async function fetchREST(endpoint: string, retries = 2, namespace = 'wp/v
 
             if (!res.ok) {
                 console.error(`Link fetch failed: ${url} - ${res.statusText}`);
-                if (i === retries - 1) return [];
+                if (i === retries - 1) throw new Error(`Fetch failed: ${url} - ${res.statusText}`);
                 continue;
             }
 
@@ -63,7 +64,7 @@ export async function fetchREST(endpoint: string, retries = 2, namespace = 'wp/v
 
             if (start === -1) {
                 console.error(`No JSON found in response from ${url}`);
-                if (i === retries - 1) return [];
+                if (i === retries - 1) throw new Error(`Fetch failed: ${url} - ${res.statusText}`);
                 continue;
             }
 
@@ -78,7 +79,7 @@ export async function fetchREST(endpoint: string, retries = 2, namespace = 'wp/v
 
             if (end === -1 || end < start) {
                 console.error(`Invalid JSON boundaries in response from ${url}`);
-                if (i === retries - 1) return [];
+                if (i === retries - 1) throw new Error(`Fetch failed: ${url} - ${res.statusText}`);
                 continue;
             }
 
@@ -93,13 +94,13 @@ export async function fetchREST(endpoint: string, retries = 2, namespace = 'wp/v
             } catch (e) {
                 console.error(`Status: ${res.status} ${res.statusText}`);
                 console.error(`Failed to parse JSON for ${url}. Response starts with: ${text.substring(0, 100)}`);
-                if (i === retries - 1) return [];
+                if (i === retries - 1) throw new Error(`Fetch failed: ${url} - ${res.statusText}`);
                 continue;
             }
         } catch (error) {
             const isTimeout = error instanceof Error && (error.name === 'AbortError' || error.message.includes('aborted'));
             if (isTimeout) {
-                throw new Error(`Fetch timed out after 30s for ${url}`);
+                throw new Error(`Fetch timed out after ${FETCH_TIMEOUT / 1000}s for ${url}`);
             }
 
             if (i === retries - 1) {
@@ -129,7 +130,7 @@ export async function fetchRESTWithMeta(endpoint: string, retries = 2, namespace
 
     for (let i = 0; i < retries; i++) {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 25000); // 25s timeout
+        const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT);
 
         try {
             const res = await fetch(url, {
@@ -177,7 +178,7 @@ export async function fetchRESTWithMeta(endpoint: string, retries = 2, namespace
 
             if (start === -1) {
                 console.error(`No JSON found in response from ${url}`);
-                if (i === retries - 1) return { data: [], totalPages, totalItems };
+                if (i === retries - 1) throw new Error(`Fetch failed: missing JSON boundaries in response from ${url}`);
                 continue;
             }
 
@@ -192,7 +193,7 @@ export async function fetchRESTWithMeta(endpoint: string, retries = 2, namespace
 
             if (end === -1 || end < start) {
                 console.error(`Invalid JSON boundaries in response from ${url}`);
-                if (i === retries - 1) return { data: [], totalPages, totalItems };
+                if (i === retries - 1) throw new Error(`Fetch failed: invalid JSON boundaries in response from ${url}`);
                 continue;
             }
 
@@ -208,13 +209,13 @@ export async function fetchRESTWithMeta(endpoint: string, retries = 2, namespace
             } catch (e) {
                 console.error(`Status: ${res.status} ${res.statusText}`);
                 console.error(`Failed to parse JSON for ${url}. Response starts with: ${text.substring(0, 100)}`);
-                if (i === retries - 1) return { data: [], totalPages, totalItems };
+                if (i === retries - 1) throw new Error(`No JSON found in response from ${url}`);
                 continue;
             }
         } catch (error) {
             const isTimeout = error instanceof Error && (error.name === 'AbortError' || error.message.includes('aborted'));
             if (isTimeout) {
-                throw new Error(`Fetch timed out after 30s for ${url}`);
+                throw new Error(`Fetch timed out after ${FETCH_TIMEOUT / 1000}s for ${url}`);
             }
 
             if (i === retries - 1) {
