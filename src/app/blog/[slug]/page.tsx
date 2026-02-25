@@ -1,10 +1,11 @@
 export const revalidate = 3600;
 import { fetchREST } from '@/lib/rest';
-import { stripScripts } from '@/lib/sanitize';
+import { stripScripts, optimizeContentImages } from '@/lib/sanitize';
 import { Calendar, User, ArrowLeft, Share2, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { Metadata } from 'next';
 import { fetchRankMathSEO, mapRankMathToMetadata, mapWPToMetadata } from '@/lib/seo';
+import ReactDOM from 'react-dom';
 
 import { cache } from 'react';
 
@@ -40,19 +41,12 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
       // Fallback
       const metadata = mapWPToMetadata(post, 'Blog | Bootflare');
-      const featuredImage = post._embedded?.['wp:featuredmedia']?.[0]?.source_url;
 
       return {
         ...metadata,
         alternates: {
           canonical: `https://bootflare.com/${slug}/`,
-        },
-        // Preload the featured image to reduce LCP discovery delay
-        other: featuredImage ? {
-          'rel': 'preload',
-          'as': 'image',
-          'href': featuredImage,
-        } : {},
+        }
       };
     }
   } catch (error) {
@@ -75,7 +69,7 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
     return <div className="container py-32 text-center text-slate-500">Post not found</div>;
   }
 
-  const sanitizedContent = stripScripts(post.content.rendered);
+  const sanitizedContent = optimizeContentImages(stripScripts(post.content.rendered));
 
   // Extract categories safely from WP REST _embedded terms
   const terms = post._embedded?.['wp:term'] || [];
@@ -90,6 +84,11 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
 
   const authorName = post._embedded?.author?.[0]?.name || "Bootflare Editorial";
   const featuredImage = post._embedded?.['wp:featuredmedia']?.[0]?.source_url;
+
+  if (featuredImage) {
+    // Correct preloading method for Next.js/React - ensures discovery even before hydration
+    ReactDOM.preload(featuredImage, { as: 'image', fetchPriority: 'high' });
+  }
 
   return (
     <article className="bg-white min-h-screen pb-20" suppressHydrationWarning>
@@ -127,6 +126,9 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
                 src={featuredImage}
                 alt={post.title.rendered}
                 className="w-full h-auto"
+                width={1200}
+                height={630}
+                decoding="async"
                 // @ts-ignore - fetchPriority is supported in modern browsers
                 fetchPriority="high"
               />

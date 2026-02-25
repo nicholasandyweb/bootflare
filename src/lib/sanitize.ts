@@ -8,6 +8,25 @@ export function stripScripts(html: string | undefined): string {
 }
 
 /**
+ * Optimizes images within WordPress content by adding loading="lazy" 
+ * and decoding="async" to improve Speed Index and reduce main thread work.
+ */
+export function optimizeContentImages(html: string): string {
+    if (!html) return "";
+    // Avoid lazy loading the very first image if it might be above the fold, 
+    // but in our blog posts the featured image is separate and handled with priority.
+    return html.replace(/<img\b([^>]*)/gi, (match, attributes) => {
+        if (!attributes.includes('loading=')) {
+            match += ' loading="lazy"';
+        }
+        if (!attributes.includes('decoding=')) {
+            match += ' decoding="async"';
+        }
+        return match;
+    });
+}
+
+/**
  * Strips specific unwanted terms from the content.
  * Used to clean up icon labels injected by plugins.
  */
