@@ -31,12 +31,8 @@ export async function fetchREST(endpoint: string, retries = 2, namespace = 'wp/v
                 next: { revalidate: 3600 }, // Cache on edge for 1 hour
                 signal: controller.signal
             });
-            clearTimeout(timeoutId);
-
             if (res.status === 504 || res.status === 524) {
-                // Gateway timeout: WordPress is too slow, don't bother retrying
-                console.error(`Link fetch timed out at gateway (504/524): ${url}`);
-                return [];
+                throw new Error(`Gateway timeout (504/524) at ${url}`);
             }
 
             if (res.status === 429 || res.status === 503 || res.status === 502) {
@@ -103,20 +99,18 @@ export async function fetchREST(endpoint: string, retries = 2, namespace = 'wp/v
         } catch (error) {
             const isTimeout = error instanceof Error && (error.name === 'AbortError' || error.message.includes('aborted'));
             if (isTimeout) {
-                console.error(`Fetch timed out after 25s for ${url}. Failing fast to avoid loop.`);
-                return []; // Fail fast on timeout
+                throw new Error(`Fetch timed out after 30s for ${url}`);
             }
 
             if (i === retries - 1) {
-                console.error(`Error fetching from REST API after ${retries} attempts (${url}):`, error);
-                return [];
+                throw error;
             }
             const waitTime = Math.pow(2, i) * 1000;
             console.warn(`Retry ${i + 1}/${retries} for ${url} after ${waitTime}ms due to network error: ${error instanceof Error ? error.message : String(error)}`);
             await new Promise(resolve => setTimeout(resolve, waitTime));
         }
     }
-    return [];
+    throw new Error(`Failed to fetch from REST API after ${retries} attempts (${url})`);
 }
 
 export async function fetchRESTWithMeta(endpoint: string, retries = 2, namespace = 'wp/v2') {
@@ -146,12 +140,8 @@ export async function fetchRESTWithMeta(endpoint: string, retries = 2, namespace
                 next: { revalidate: 3600 }, // Cache on edge for 1 hour
                 signal: controller.signal
             });
-            clearTimeout(timeoutId);
-
             if (res.status === 504 || res.status === 524) {
-                // Gateway timeout: WordPress is too slow, don't bother retrying
-                console.error(`Link fetch timed out at gateway (504/524): ${url}`);
-                return { data: [], totalPages: 1, totalItems: 0 };
+                throw new Error(`Gateway timeout (504/524) at ${url}`);
             }
 
             if (res.status === 429 || res.status === 503 || res.status === 502) {
@@ -164,14 +154,14 @@ export async function fetchRESTWithMeta(endpoint: string, retries = 2, namespace
 
             if (!res.ok) {
                 console.error(`Link fetch failed: ${url} - ${res.statusText}`);
-                if (i === retries - 1) return { data: [], totalPages: 1, totalItems: 0 };
+                if (i === retries - 1) throw new Error(`Fetch failed with status ${res.status}: ${url}`);
                 continue;
             }
 
             const totalPagesStr = res.headers.get('X-WP-TotalPages');
             const totalItemsStr = res.headers.get('X-WP-Total');
-            const totalPages = totalPagesStr ? parseInt(totalPagesStr, 10) : 1;
-            const totalItems = totalItemsStr ? parseInt(totalItemsStr, 10) : 0;
+            const totalPages = totalPagesStr ? parseInt(totalPagesStr as string, 10) : 1;
+            const totalItems = totalItemsStr ? parseInt(totalItemsStr as string, 10) : 0;
 
             const text = await res.text();
 
@@ -224,18 +214,16 @@ export async function fetchRESTWithMeta(endpoint: string, retries = 2, namespace
         } catch (error) {
             const isTimeout = error instanceof Error && (error.name === 'AbortError' || error.message.includes('aborted'));
             if (isTimeout) {
-                console.error(`Fetch timed out after 25s for ${url}. Failing fast to avoid loop.`);
-                return { data: [], totalPages: 1, totalItems: 0 }; // Fail fast on timeout
+                throw new Error(`Fetch timed out after 30s for ${url}`);
             }
 
             if (i === retries - 1) {
-                console.error(`Error fetching from REST API after ${retries} attempts (${url}):`, error);
-                return { data: [], totalPages: 1, totalItems: 0 };
+                throw error;
             }
             const waitTime = Math.pow(2, i) * 1000;
             console.warn(`Retry ${i + 1}/${retries} for ${url} after ${waitTime}ms due to network error: ${error instanceof Error ? error.message : String(error)}`);
             await new Promise(resolve => setTimeout(resolve, waitTime));
         }
     }
-    return { data: [], totalPages: 1, totalItems: 0 };
+    throw new Error(`Failed to fetch from REST API after ${retries} attempts (${url})`);
 }
