@@ -85,9 +85,9 @@ export default async function LogosTemplate({
         fetchRankMathSEO(seoUrl),
     ]);
 
-    if (logosResult.status === 'fulfilled' && logosResult.value.data) {
-        logos = logosResult.value.data;
-        totalPages = logosResult.value.totalPages;
+    if (logosResult.status === 'fulfilled' && logosResult.value?.data) {
+        logos = Array.isArray(logosResult.value.data) ? logosResult.value.data : [];
+        totalPages = logosResult.value.totalPages || 1;
     } else {
         console.error(`REST fetching failed for ${route}:`, logosResult.status === 'rejected' ? logosResult.reason : 'No data');
     }
