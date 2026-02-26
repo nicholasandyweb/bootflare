@@ -10,6 +10,13 @@ export function middleware(request: NextRequest) {
         response.headers.set('X-Robots-Tag', 'noindex, nofollow');
     }
 
+    // Enable browser caching for Next.js navigation data (RSC)
+    // This makes page transitions instant after prefetch
+    const isRSC = request.headers.has('RSC') || request.headers.has('Next-Router-Prefetch');
+    if (isRSC) {
+        response.headers.set('Cache-Control', 'public, max-age=3600, stale-while-revalidate=86400');
+    }
+
     return response;
 }
 
