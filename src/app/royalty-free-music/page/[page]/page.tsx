@@ -22,15 +22,7 @@ export async function generateMetadata({ params }: { params: Promise<{ page: str
     return metadata;
 }
 
-// Pre-render the first 5 pages for instant loading
-export async function generateStaticParams() {
-    return [
-        { page: '2' },
-        { page: '3' },
-        { page: '4' },
-        { page: '5' }
-    ];
-}
+
 
 interface Album {
     id: number;

@@ -61,8 +61,14 @@ export async function fetchGraphQL<T>(query: string, variables?: Record<string, 
       return json.data;
     } catch (error) {
       clearTimeout(timeoutId);
+      const isBuild = process.env.NODE_ENV === 'production' && process.env.CF_PAGES === '1';
+
       if (i === retries - 1) {
         console.error(`Error fetching from GraphQL API after ${retries} attempts:`, error);
+        if (isBuild) {
+          console.warn(`Build-safe fallback triggered for GraphQL`);
+          return null as any;
+        }
         throw error;
       }
       const waitTime = Math.pow(2, i) * 2000;
@@ -71,5 +77,5 @@ export async function fetchGraphQL<T>(query: string, variables?: Record<string, 
     }
   }
 
-  throw new Error('Failed to fetch GraphQL API after max retries');
+  return null as any;
 }

@@ -9,14 +9,7 @@ export async function generateMetadata(): Promise<Metadata> {
     return { title: 'Free Brand Logos | Bootflare' };
 }
 
-export async function generateStaticParams() {
-    return [
-        { page: '2' },
-        { page: '3' },
-        { page: '4' },
-        { page: '5' }
-    ];
-}
+
 
 export default async function FreeLogosPaginated({ params }: { params: Promise<{ page: string }> }) {
     const { page: pageStr } = await params;
