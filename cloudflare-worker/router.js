@@ -96,8 +96,11 @@ export default {
                 }
             });
 
-            // Cache successful API responses
-            if (isApi && response.ok && ['GET', 'POST'].includes(request.method)) {
+            // Cache successful API responses that return actual JSON (not HTML bot challenges)
+            const contentType = response.headers.get('content-type') || '';
+            const isJson = contentType.includes('application/json');
+
+            if (isApi && response.ok && isJson && ['GET', 'POST'].includes(request.method)) {
                 const responseToCache = new Response(response.clone().body, response);
                 responseToCache.headers.set('Cache-Control', 'public, s-maxage=3600');
                 ctx.waitUntil(cache.put(cacheKey, responseToCache));

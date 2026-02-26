@@ -46,7 +46,10 @@ export async function fetchREST(endpoint: string, retries = 2, namespace = 'wp/v
 
             if (!res.ok) {
                 console.error(`Link fetch failed: ${url} - ${res.statusText}`);
-                if (i === retries - 1) throw new Error(`Fetch failed: ${url} - ${res.statusText}`);
+                if (i === retries - 1) {
+                    console.warn(`Failed to fetch from REST API after ${retries} attempts (${url}), returning null for fallback.`);
+                    return null; // Graceful fallback instead of throw
+                }
                 continue;
             }
 
@@ -84,7 +87,10 @@ export async function fetchREST(endpoint: string, retries = 2, namespace = 'wp/v
 
             if (end === -1 || end < start) {
                 console.error(`Invalid JSON boundaries in response from ${url}`);
-                if (i === retries - 1) throw new Error(`Fetch failed: ${url} - ${res.statusText}`);
+                if (i === retries - 1) {
+                    console.warn(`Failed to fetch from REST API after ${retries} attempts (${url}), returning null.`);
+                    return null;
+                }
                 continue;
             }
 
@@ -99,7 +105,10 @@ export async function fetchREST(endpoint: string, retries = 2, namespace = 'wp/v
             } catch (e) {
                 console.error(`Status: ${res.status} ${res.statusText}`);
                 console.error(`Failed to parse JSON for ${url}. Response starts with: ${text.substring(0, 100)}`);
-                if (i === retries - 1) throw new Error(`Fetch failed: ${url} - ${res.statusText}`);
+                if (i === retries - 1) {
+                    console.warn(`Failed to parse JSON after ${retries} attempts (${url}), returning null.`);
+                    return null;
+                }
                 continue;
             }
         } catch (error) {
@@ -162,7 +171,10 @@ export async function fetchRESTWithMeta(endpoint: string, retries = 2, namespace
 
             if (!res.ok) {
                 console.error(`Link fetch failed: ${url} - ${res.statusText}`);
-                if (i === retries - 1) throw new Error(`Fetch failed with status ${res.status}: ${url}`);
+                if (i === retries - 1) {
+                    console.warn(`Failed to fetch from REST API after ${retries} attempts (${url}), returning null for fallback.`);
+                    return null; // Graceful fallback instead of throw
+                }
                 continue;
             }
 
@@ -205,7 +217,10 @@ export async function fetchRESTWithMeta(endpoint: string, retries = 2, namespace
 
             if (end === -1 || end < start) {
                 console.error(`Invalid JSON boundaries in response from ${url}`);
-                if (i === retries - 1) throw new Error(`Fetch failed: invalid JSON boundaries in response from ${url}`);
+                if (i === retries - 1) {
+                    console.warn(`Failed to fetch from REST API after ${retries} attempts (${url}), returning null.`);
+                    return null;
+                }
                 continue;
             }
 
@@ -221,7 +236,10 @@ export async function fetchRESTWithMeta(endpoint: string, retries = 2, namespace
             } catch (e) {
                 console.error(`Status: ${res.status} ${res.statusText}`);
                 console.error(`Failed to parse JSON for ${url}. Response starts with: ${text.substring(0, 100)}`);
-                if (i === retries - 1) throw new Error(`No JSON found in response from ${url}`);
+                if (i === retries - 1) {
+                    console.warn(`Failed to parse JSON after ${retries} attempts (${url}), returning null.`);
+                    return null;
+                }
                 continue;
             }
         } catch (error) {
