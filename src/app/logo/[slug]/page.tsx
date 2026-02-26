@@ -158,6 +158,8 @@ async function getRelatedLogos(logo: LogoNode) {
 
 export default async function SingleLogo({ params }: { params: Promise<{ slug: string }> }) {
     const { slug } = await params;
+
+    // Step 1: Fetch core logo data (GraphQL - Fast)
     const logo = await getLogoBySlug(slug);
 
     if (!logo) {
@@ -171,11 +173,15 @@ export default async function SingleLogo({ params }: { params: Promise<{ slug: s
         );
     }
 
+    // Step 2: Fetch related logos (REST) while processing the page content
+    // We don't await this immediately to allow other processing if needed
+    const relatedLogosPromise = getRelatedLogos(logo);
+
     const featuredImage = logo.featuredImage?.node.sourceUrl;
     const finalCategories = logo.logoCategories?.nodes || [];
 
     const sanitizedContent = logo.content ? stripScripts(logo.content) : '';
-    const relatedLogos = await getRelatedLogos(logo);
+    const relatedLogos = await relatedLogosPromise;
 
     return (
         <div suppressHydrationWarning className="bg-slate-50 min-h-screen">
