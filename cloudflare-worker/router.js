@@ -62,10 +62,20 @@ export default {
         }
 
         // ── Next.js: forward to Origin Worker ──────────────────────────
-        // ORIGIN_URL is set in the Worker's environment variables,
-        // e.g. https://bootflare.crimson-mud-7db5.workers.dev
         const originBase = env.ORIGIN_URL;
-        const targetUrl = new URL(pathname + url.search, originBase);
+
+        if (!originBase) {
+            console.error('ERROR: ORIGIN_URL environment variable is missing.');
+            return new Response('Worker Configuration Error: ORIGIN_URL is missing.', { status: 500 });
+        }
+
+        let targetUrl;
+        try {
+            targetUrl = new URL(pathname + url.search, originBase);
+        } catch (e) {
+            console.error(`ERROR: Failed to construct targetUrl. pathname: "${pathname}", originBase: "${originBase}"`);
+            return new Response(`Worker Configuration Error: Invalid ORIGIN_URL ("${originBase}")`, { status: 500 });
+        }
 
         // --- Cache Logic ---
         const cache = caches.default;
@@ -80,18 +90,28 @@ export default {
         // If it's a data request, append a suffix to the path in the cache key
         // to keep it separate from the HTML version but shared between prefetch/nav.
         if (isRSC) {
-            cacheUrl.pathname += '/__data.json';
+            // Ensure we don't end up with triple slashes
+            const baseDataPath = cacheUrl.pathname.endsWith('/') ? cacheUrl.pathname.slice(0, -1) : cacheUrl.pathname;
+            cacheUrl.pathname = baseDataPath + '/__data.json';
         }
-        const cacheKey = new Request(cacheUrl.toString(), {
-            method: request.method,
-            // We strip the intent-specific headers for the cache key so prefetch hits nav
-            headers: (() => {
-                const h = new Headers(request.headers);
-                h.delete('Next-Router-Prefetch');
-                h.delete('Purpose');
-                return h;
-            })()
-        });
+
+        let cacheKey;
+        try {
+            cacheKey = new Request(cacheUrl.toString(), {
+                method: request.method,
+                // We strip the intent-specific headers for the cache key so prefetch hits nav
+                headers: (() => {
+                    const h = new Headers(request.headers);
+                    h.delete('Next-Router-Prefetch');
+                    h.delete('Purpose');
+                    return h;
+                })()
+            });
+        } catch (e) {
+            console.error(`ERROR: Failed to construct cacheKey. cacheUrl: "${cacheUrl.toString()}"`);
+            // Fallback to original request as cache key if normalization fails
+            cacheKey = request;
+        }
 
         const useCache = isCacheableMethod && !url.searchParams.has('nocache');
 
