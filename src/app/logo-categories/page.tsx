@@ -77,7 +77,9 @@ export default async function LogoCategoriesArchive() {
                 fetchREST('logos?per_page=100&hide_empty=true&_fields=id,name,slug,count'),
                 fetchREST('taxonomies/logos?_fields=name,description')
             ]);
-            if (results[0].status === 'fulfilled') categories = results[0].value as LogoCategory[];
+            if (results[0].status === 'fulfilled') {
+                categories = Array.isArray(results[0].value) ? results[0].value : [];
+            }
             if (results[1].status === 'fulfilled') taxonomyMeta = results[1].value;
         } catch (e) {
             console.error('Final REST fallback failed:', e);

@@ -1,6 +1,6 @@
 import { Metadata } from 'next';
 
-const WP_URL = 'https://origin-wp.bootflare.com';
+const WP_URL = process.env.NEXT_PUBLIC_WORDPRESS_URL || 'https://bootflare.com';
 
 interface WPPost {
     title?: { rendered: string } | string;
@@ -69,7 +69,7 @@ function extractTitle(head: string): string | undefined {
  */
 export async function fetchRankMathSEO(postUrl: string): Promise<RankMathSEO | null> {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10000); // 10s timeout
+    const timeout = setTimeout(() => controller.abort(), 20000); // 20s timeout
 
     try {
         const apiUrl = `${WP_URL}/wp-json/rankmath/v1/getHead?url=${encodeURIComponent(postUrl)}`;
