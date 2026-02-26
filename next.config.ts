@@ -14,6 +14,10 @@ const nextConfig: NextConfig = {
   experimental: {
     workerThreads: false,
     cpus: 1,
+    staleTimes: {
+      dynamic: 3600,
+      static: 3600,
+    },
   },
 };
 

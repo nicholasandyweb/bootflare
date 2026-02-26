@@ -11,7 +11,7 @@ const Header = () => {
     return (
         <header className="fixed top-0 left-0 w-full z-50 bg-white py-4 border-b border-slate-100">
             <div className="container flex justify-between items-center">
-                <Link href="/" className="flex items-center gap-2">
+                <Link href="/" prefetch={true} className="flex items-center gap-2">
                     <Image
                         src="https://bootflare.com/wp-content/uploads/2023/03/Bootflare-Logo-e1679434514501-300x110.png"
                         alt="Bootflare Logo"
@@ -23,8 +23,8 @@ const Header = () => {
                 </Link>
 
                 <nav className="hidden lg:flex gap-8 items-center">
-                    <Link href="/" className="font-bold text-primary">Home</Link>
-                    <Link href="/about-us" className="font-semibold text-slate-600 hover:text-primary transition-colors">About</Link>
+                    <Link href="/" prefetch={true} className="font-bold text-primary">Home</Link>
+                    <Link href="/about-us" prefetch={true} className="font-semibold text-slate-600 hover:text-primary transition-colors">About</Link>
 
                     <div className="group relative">
                         <button className="flex items-center gap-1 font-semibold text-slate-600 hover:text-primary transition-colors py-2">
