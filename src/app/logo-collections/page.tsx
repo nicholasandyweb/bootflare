@@ -63,6 +63,8 @@ export default async function LogoCollectionsArchive() {
                 count: node.count
             }));
             taxonomyMeta = gqlData.taxonomy;
+        } else {
+            throw new Error('GraphQL returned no data for LogoCollections');
         }
 
         seoData = seoResult;
