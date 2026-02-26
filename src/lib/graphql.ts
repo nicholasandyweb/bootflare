@@ -20,9 +20,11 @@ export async function fetchGraphQL<T>(query: string, variables?: Record<string, 
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         },
         body: JSON.stringify({ query, variables }),
-        next: { revalidate: 3600 }, // Cache on edge for 1 hour
+        next: { revalidate: 3600 },
         signal: controller.signal
       });
       clearTimeout(timeoutId);
@@ -37,8 +39,8 @@ export async function fetchGraphQL<T>(query: string, variables?: Record<string, 
 
       if (!res.ok) {
         const text = await res.text();
-        console.error(`GraphQL Fetch Failed: ${res.status} ${res.statusText}`);
-        console.error(`Response snippet: ${text.substring(0, 500)}`);
+        console.error(`GraphQL Fetch Failed: ${res.status} ${res.statusText} at ${endpoint}`);
+        console.error(`Response snippet: ${text.substring(0, 1000)}`); // Increased snippet length
         if (i === retries - 1) throw new Error(`Failed to fetch API: ${res.status}`);
         continue;
       }
