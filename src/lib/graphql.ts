@@ -63,11 +63,11 @@ export async function fetchGraphQL<T>(query: string, variables?: Record<string, 
       clearTimeout(timeoutId);
       const isBuild = process.env.NODE_ENV === 'production' && process.env.CF_PAGES === '1';
 
-      if (i === retries - 1) {
-        console.error(`Error fetching from GraphQL API after ${retries} attempts:`, error);
+      if (i === retries - 1 || isBuild) {
+        console.error(`Error fetching from GraphQL API (Attempt ${i + 1}/${retries}):`, error);
         if (isBuild) {
           console.warn(`Build-safe fallback triggered for GraphQL`);
-          return null as any;
+          return {} as any;
         }
         throw error;
       }
@@ -76,6 +76,5 @@ export async function fetchGraphQL<T>(query: string, variables?: Record<string, 
       await new Promise(resolve => setTimeout(resolve, waitTime));
     }
   }
-
-  return null as any;
+  return {} as any;
 }

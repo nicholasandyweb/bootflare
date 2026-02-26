@@ -61,8 +61,8 @@ export default async function BlogPage() {
   let errorOccurred = false;
 
   try {
-    const data: { posts: { nodes: GQLPost[] } } = await fetchGraphQL(GET_BLOG_POSTS);
-    posts = data.posts.nodes;
+    const data: { posts?: { nodes: GQLPost[] } } = await fetchGraphQL(GET_BLOG_POSTS);
+    posts = data?.posts?.nodes || [];
   } catch (error) {
     console.error('Error fetching posts:', error);
     errorOccurred = true;
