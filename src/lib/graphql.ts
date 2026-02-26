@@ -57,9 +57,15 @@ export async function fetchGraphQL<T>(query: string, variables?: Record<string, 
       }
 
       if (json.errors) {
-        console.error('GraphQL Errors:', json.errors);
+        console.error('GraphQL Errors:', JSON.stringify(json.errors, null, 2));
         throw new Error('Failed to fetch API due to GraphQL Errors');
       }
+
+      if (!json.data) {
+        console.error('GraphQL Response missing "data" field:', JSON.stringify(json, null, 2));
+        throw new Error('GraphQL Response missing "data" field');
+      }
+
       return json.data;
     } catch (error) {
       clearTimeout(timeoutId);
