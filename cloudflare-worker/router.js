@@ -43,18 +43,23 @@ export default {
         // Check if this is a WordPress path
         const isWordPressPath = WP_PATHS.some(
             (prefix) => pathname === prefix || pathname.startsWith(prefix + '/')
-        );
+        ) || pathname.startsWith('/wp-');
 
         if (isWordPressPath) {
             // ── WordPress: pass through to shared hosting origin ──
-            // Using resolveOverride to bypass Cloudflare and route to our grey-cloud
-            // fallback DNS record. This breaks the infinite routing loop caused
-            // by the Worker calling fetch('https://bootflare.com/...')
-            // By resolving to the origin-wp hostname, Cloudflare connects to the
-            // shared host IP, but importantly keeps the TLS SNI and Host header 
-            // exactly as `bootflare.com`, satisfying the strict LiteSpeed server.
-            const newRequest = new Request(request.url, request);
-            return fetch(newRequest, {
+            // Use resolveOverride with the grey-clouded hostname.
+            // This is the stable way to bypass the worker routing while keeping SNI valid.
+            const wpHeaders = new Headers(request.headers);
+            wpHeaders.set('Host', 'bootflare.com');
+            wpHeaders.set('X-Forwarded-Host', 'bootflare.com');
+            wpHeaders.set('X-Forwarded-Proto', 'https');
+            wpHeaders.set('X-Forwarded-For', request.headers.get('CF-Connecting-IP') || '');
+
+            return fetch(request.url, {
+                method: request.method,
+                headers: wpHeaders,
+                body: ['GET', 'HEAD'].includes(request.method) ? null : request.body,
+                redirect: 'manual', // CRITICAL: Handle redirects in the browser to break the 524 loop.
                 cf: {
                     resolveOverride: 'origin-wp.bootflare.com'
                 }
