@@ -144,24 +144,28 @@ export default {
 
         // Store in cache if status is OK and it's a cacheable method
         if (useCache && response.ok) {
-            // We need to clone the response to put it in cache and return it
             const responseToCache = new Response(response.body, response);
+
             // Ensure Cache-Control is set so it actually stays in cache
-            // s-maxage=3600 (1 hour) on the edge, max-age=3600 (1 hour) in browser
-            responseToCache.headers.set('Cache-Control', 'public, s-maxage=3600, max-age=3600');
-            // Strip Vary header if it contains RSC/Prefetch to ensure our normalized key works
-            const vary = responseToCache.headers.get('Vary') || '';
-            if (vary.toLowerCase().includes('rsc') || vary.toLowerCase().includes('prefetch')) {
-                // We trust our cacheKey normalization, so we can relax the Vary header
-                responseToCache.headers.set('Vary', vary.split(',').map(s => s.trim()).filter(s =>
-                    !['rsc', 'next-router-prefetch', 'next-router-state-tree', 'purpose'].includes(s.toLowerCase())
-                ).join(', '));
+            if (isRSC) {
+                // For RSC data, we use immutable caching to prevent browser re-validation
+                responseToCache.headers.set('Cache-Control', 'public, s-maxage=3600, max-age=3600, immutable');
+                // Standardize Vary to 'Accept' to match middleware.ts
+                responseToCache.headers.set('Vary', 'Accept');
+            } else {
+                responseToCache.headers.set('Cache-Control', 'public, s-maxage=3600, max-age=3600');
+                // Prune Vary header to remove RSC/Prefetch noise for HTML too
+                const vary = responseToCache.headers.get('Vary') || '';
+                if (vary.toLowerCase().includes('rsc') || vary.toLowerCase().includes('prefetch')) {
+                    responseToCache.headers.set('Vary', vary.split(',').map(s => s.trim()).filter(s =>
+                        !['rsc', 'next-router-prefetch', 'next-router-state-tree', 'purpose'].includes(s.toLowerCase())
+                    ).join(', '));
+                }
             }
 
             // event.waitUntil ensures the worker doesn't terminate before the cache is updated
             ctx.waitUntil(cache.put(cacheKey, responseToCache.clone()));
 
-            // Re-create the response to return (since the body might be locked/consumed)
             response = new Response(responseToCache.body, responseToCache);
             response.headers.set('X-Worker-Cache', 'MISS');
         }

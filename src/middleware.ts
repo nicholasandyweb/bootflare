@@ -20,12 +20,11 @@ export function middleware(request: NextRequest) {
         // We set immutable to tell the browser this data is safe for 1 hour.
         response.headers.set('Cache-Control', 'public, max-age=3600, immutable');
 
-        // CRITICAL: We strip the 'Vary' header. 
-        // Next.js often varies on 'Next-Router-Prefetch', which prevents the browser 
-        // from using a prefetch result for the actual navigation.
-        response.headers.delete('Vary');
-
-        // We add a simple Vary: Accept to ensure we don't mix HTML and RSC data
+        // CRITICAL: We standardize the 'Vary' header.
+        // By default, Next.js varies on 'RSC' and 'Next-Router-Prefetch'.
+        // If the browser prefetches with a set of headers and then navigates with 
+        // a slightly different set (e.g. 'Purpose: prefetch' vs none), it might 
+        // miss the cache. Force-setting it to just 'Accept' solves this.
         response.headers.set('Vary', 'Accept');
     }
 
