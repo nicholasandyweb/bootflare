@@ -110,7 +110,7 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
                     <p className="text-slate-500 text-lg font-light mb-8 max-w-md mx-auto">
                         We couldn't reach the WordPress server in time. Please try refreshing the page in a few moments.
                     </p>
-                    <Link href="/blog" prefetch={true} className="btn-premium">
+                    <Link href="/blog" className="btn-premium">
                         Back to Blog
                     </Link>
                 </div>
@@ -123,7 +123,7 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
             <div className="bg-slate-50 min-h-screen pt-32 pb-20">
                 <div className="container text-center py-32 bg-white rounded-[3rem] border border-dashed border-slate-200">
                     <p className="text-slate-400 text-xl font-light">Category not found.</p>
-                    <Link href="/blog" prefetch={true} className="text-primary font-bold mt-4 inline-block hover:underline transition-colors">
+                    <Link href="/blog" className="text-primary font-bold mt-4 inline-block hover:underline transition-colors">
                         Back to Blog
                     </Link>
                 </div>
@@ -158,7 +158,7 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
                         return (
                             <article key={post.id} className="card-premium !p-0 flex flex-col group h-full transition-all hover:shadow-2xl hover:shadow-primary/5">
                                 {featuredImage && (
-                                    <Link href={`/blog/${post.slug}`} prefetch={true} className="relative h-64 overflow-hidden rounded-t-[2rem]">
+                                    <Link href={`/blog/${post.slug}`} className="relative h-64 overflow-hidden rounded-t-[2rem]">
                                         <img
                                             src={featuredImage}
                                             alt={post.title}
@@ -177,7 +177,7 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
                                         </div>
                                     </div>
 
-                                    <Link href={`/blog/${post.slug}`} prefetch={true} className="mb-4">
+                                    <Link href={`/blog/${post.slug}`} className="mb-4">
                                         <h3
                                             className="text-xl font-bold text-slate-900 hover:text-primary transition-colors line-clamp-2 leading-tight"
                                             dangerouslySetInnerHTML={{ __html: post.title }}
@@ -189,7 +189,7 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
                                         dangerouslySetInnerHTML={{ __html: stripScripts(post.excerpt) }}
                                     />
 
-                                    <Link href={`/blog/${post.slug}`} prefetch={true} className="flex items-center gap-2 text-primary font-bold text-sm group-link">
+                                    <Link href={`/blog/${post.slug}`} className="flex items-center gap-2 text-primary font-bold text-sm group-link">
                                         Read Story <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                                     </Link>
                                 </div>

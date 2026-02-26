@@ -56,7 +56,6 @@ export default function Pagination({ currentPage, totalPages, baseUrl, usePathBa
             {currentPage > 1 && (
                 <Link
                     href={getPageUrl(currentPage - 1)}
-                    prefetch={true}
                     className="font-medium text-slate-800 hover:text-[#8b5cf6] transition-colors"
                 >
                     Prev
@@ -78,7 +77,6 @@ export default function Pagination({ currentPage, totalPages, baseUrl, usePathBa
                         <Link
                             key={page}
                             href={getPageUrl(page as number)}
-                            prefetch={true}
                             className={`min-w-[42px] h-[42px] px-2 flex items-center justify-center rounded-[10px] font-medium transition-all ${isActive
                                 ? "bg-[#8b5cf6] text-white"
                                 : "text-slate-800 hover:bg-slate-100 hover:text-[#8b5cf6]"
@@ -93,7 +91,6 @@ export default function Pagination({ currentPage, totalPages, baseUrl, usePathBa
             {currentPage < totalPages && (
                 <Link
                     href={getPageUrl(currentPage + 1)}
-                    prefetch={true}
                     className="font-medium text-slate-800 hover:text-[#8b5cf6] transition-colors"
                 >
                     Next
