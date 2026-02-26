@@ -20,6 +20,7 @@ const nextConfig: NextConfig = {
     },
   },
   trailingSlash: false,
+  staticPageGenerationTimeout: 300,
 };
 
 export default nextConfig;

@@ -51,8 +51,12 @@ interface GQLPost {
 }
 
 export async function generateMetadata(): Promise<Metadata> {
-  const seo = await fetchRankMathSEO('https://bootflare.com/blog/');
-  if (seo) return mapRankMathToMetadata(seo);
+  try {
+    const seo = await fetchRankMathSEO('https://bootflare.com/blog/');
+    if (seo) return mapRankMathToMetadata(seo);
+  } catch (e) {
+    console.error('Metadata fetch failed for blog:', e);
+  }
   return { title: 'Blog | Bootflare' };
 }
 
@@ -68,16 +72,16 @@ export default async function BlogPage() {
     errorOccurred = true;
   }
 
-  if (errorOccurred) {
+  if (errorOccurred || !posts.length) {
     return (
       <div className="bg-slate-50 min-h-screen pt-32 pb-20">
         <div className="container text-center py-32 bg-white rounded-[3rem] border border-dashed border-red-200">
           <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
             <AlertTriangle className="w-8 h-8" />
           </div>
-          <h2 className="text-2xl font-bold text-slate-800 mb-4">WordPress is taking too long</h2>
+          <h2 className="text-2xl font-bold text-slate-800 mb-4">Blog Content Unavailable</h2>
           <p className="text-slate-500 text-lg font-light mb-8 max-w-md mx-auto">
-            We couldn't reach the WordPress server in time. Please try refreshing the page in a few moments.
+            We're currently updating our blog. Please check back in a few moments or explore our other resources.
           </p>
           <Link href="/" prefetch={true} className="btn-premium">
             Back to Home

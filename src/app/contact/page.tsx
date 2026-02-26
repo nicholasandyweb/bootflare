@@ -1,6 +1,7 @@
 export const revalidate = 86400; // 24 hours
 import { fetchGraphQL } from '@/lib/graphql';
 import ContactForm from '@/components/ContactForm';
+import Link from 'next/link';
 
 const GET_CONTACT_PAGE = `
   query GetContactPage {
@@ -26,8 +27,19 @@ export default async function ContactPage() {
   }
 
   if (!page) {
-    console.error('Contact page data missing during build.');
-    throw new Error('Contact page content not found');
+    return (
+      <div className="bg-slate-50 min-h-screen pt-32 pb-20 flex items-center justify-center">
+        <div className="container text-center py-32 bg-white rounded-[3rem] border border-dashed border-slate-200">
+          <h2 className="text-2xl font-bold text-slate-800 mb-4">Contact Information Unavailable</h2>
+          <p className="text-slate-500 text-lg font-light mb-8 max-w-md mx-auto">
+            Our contact page is temporarily undergoing maintenance. Please try again shortly.
+          </p>
+          <Link href="/" className="btn-premium">
+            Back to Home
+          </Link>
+        </div>
+      </div>
+    );
   }
 
   // Strip HTML tags from excerpt for plain text display

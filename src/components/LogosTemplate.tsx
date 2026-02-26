@@ -155,7 +155,7 @@ export default async function LogosTemplate({
                     {logos.length === 0 && (
                         <div className="text-center py-32 bg-white rounded-[3rem] border border-dashed border-slate-200">
                             <Sparkles className="w-12 h-12 text-primary/20 mx-auto mb-6 animate-pulse" />
-                            <p className="text-slate-400 text-xl font-light">Loading our premium directory...</p>
+                            <p className="text-slate-400 text-xl font-light">No logos found for this selection. Try adjusting your filter or search.</p>
                         </div>
                     )}
                 </section>

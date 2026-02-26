@@ -2,13 +2,18 @@ export const revalidate = 86400; // 24 hours
 import { fetchGraphQL } from '@/lib/graphql';
 import { stripScripts, stripUnwantedTerms } from '@/lib/sanitize';
 import { Sparkles, CheckCircle2, Award, Users, Globe } from 'lucide-react';
+import Link from 'next/link';
 import Image from 'next/image';
 import { fetchRankMathSEO, mapRankMathToMetadata } from '@/lib/seo';
 import { Metadata } from 'next';
 
 export async function generateMetadata(): Promise<Metadata> {
-    const seo = await fetchRankMathSEO('https://bootflare.com/about-us/');
-    if (seo) return mapRankMathToMetadata(seo);
+    try {
+        const seo = await fetchRankMathSEO('https://bootflare.com/about-us/');
+        if (seo) return mapRankMathToMetadata(seo);
+    } catch (e) {
+        console.error('Metadata fetch failed for about-us:', e);
+    }
     return { title: 'About Us | Bootflare' };
 }
 
@@ -48,8 +53,19 @@ export default async function AboutPage() {
     }
 
     if (!page || !page.title || !page.content) {
-        console.error('About Us page content incomplete or missing. Data:', JSON.stringify(page));
-        throw new Error('About Us page content not found');
+        return (
+            <div className="bg-slate-50 min-h-screen pt-32 pb-20">
+                <div className="container text-center py-32 bg-white rounded-[3rem] border border-dashed border-slate-200">
+                    <h2 className="text-2xl font-bold text-slate-800 mb-4">About Us Content Missing</h2>
+                    <p className="text-slate-500 text-lg font-light mb-8 max-w-md mx-auto">
+                        This page is currently being updated. Please check back later.
+                    </p>
+                    <Link href="/" className="btn-premium">
+                        Back to Home
+                    </Link>
+                </div>
+            </div>
+        );
     }
 
     const sanitizedContent = stripUnwantedTerms(stripScripts(page.content));

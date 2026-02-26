@@ -68,6 +68,9 @@ function extractTitle(head: string): string | undefined {
  * Uses the /wp-json/rankmath/v1/getHead endpoint.
  */
 export async function fetchRankMathSEO(postUrl: string): Promise<RankMathSEO | null> {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000); // 10s timeout
+
     try {
         const apiUrl = `${WP_URL}/wp-json/rankmath/v1/getHead?url=${encodeURIComponent(postUrl)}`;
         const res = await fetch(apiUrl, {
@@ -75,8 +78,11 @@ export async function fetchRankMathSEO(postUrl: string): Promise<RankMathSEO | n
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                 'Accept': 'application/json'
             },
-            next: { revalidate: 3600 } // Cache SEO data
+            signal: controller.signal,
+            next: { revalidate: 3600 }
         });
+        clearTimeout(timeout);
+
         if (!res.ok) return null;
 
         const data = await res.json();
@@ -95,6 +101,7 @@ export async function fetchRankMathSEO(postUrl: string): Promise<RankMathSEO | n
             twitterImage: extractMeta(head, 'twitter:image'),
         };
     } catch {
+        clearTimeout(timeout);
         return null;
     }
 }
