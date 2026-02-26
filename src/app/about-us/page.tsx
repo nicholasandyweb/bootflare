@@ -47,7 +47,8 @@ export default async function AboutPage() {
         console.error('Error fetching about page:', error);
     }
 
-    if (!page) {
+    if (!page || !page.title || !page.content) {
+        console.error('About Us page content incomplete or missing. Data:', JSON.stringify(page));
         throw new Error('About Us page content not found');
     }
 

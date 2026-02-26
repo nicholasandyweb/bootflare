@@ -19,6 +19,7 @@ const nextConfig: NextConfig = {
       static: 3600,
     },
   },
+  trailingSlash: false,
 };
 
 export default nextConfig;

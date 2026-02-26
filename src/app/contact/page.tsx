@@ -25,10 +25,15 @@ export default async function ContactPage() {
     console.error('Error fetching contact page:', error);
   }
 
+  if (!page) {
+    console.error('Contact page data missing during build.');
+    throw new Error('Contact page content not found');
+  }
+
   // Strip HTML tags from excerpt for plain text display
-  const plainExcerpt = page?.excerpt
+  const plainExcerpt = page.excerpt
     ? page.excerpt.replace(/<[^>]*>/g, '').trim()
     : undefined;
 
-  return <ContactForm title={page?.title} excerpt={plainExcerpt} />;
+  return <ContactForm title={page.title} excerpt={plainExcerpt} />;
 }
