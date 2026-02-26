@@ -1,5 +1,5 @@
 export const revalidate = 3600;
-import { cache } from 'react';
+import { cache, Suspense } from 'react';
 import { fetchREST } from '@/lib/rest';
 import Link from 'next/link';
 import { Download, ChevronLeft, Flag } from 'lucide-react';
@@ -177,15 +177,10 @@ export default async function SingleLogo({ params }: { params: Promise<{ slug: s
         );
     }
 
-    // Step 2: Fetch related logos (REST) while processing the page content
-    // We don't await this immediately to allow other processing if needed
-    const relatedLogosPromise = getRelatedLogos(logo);
-
     const featuredImage = logo.featuredImage?.node.sourceUrl;
     const finalCategories = logo.logoCategories?.nodes || [];
 
     const sanitizedContent = logo.content ? stripScripts(logo.content) : '';
-    const relatedLogos = await relatedLogosPromise;
 
     return (
         <div suppressHydrationWarning className="bg-slate-50 min-h-screen">
@@ -292,21 +287,46 @@ export default async function SingleLogo({ params }: { params: Promise<{ slug: s
                 </div>
 
                 {/* Related Logos Section */}
-                {relatedLogos.length > 0 && (
-                    <div className="mt-32">
-                        <div className="text-center mb-12">
-                            <h2 className="text-3xl font-bold text-gray-900">You may also like</h2>
-                        </div>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
-                            {relatedLogos.map((item: any) => (
-                                <LogoCard key={item.id} logo={item} />
-                            ))}
-                        </div>
-                    </div>
-                )}
+                <Suspense fallback={<RelatedLogosSkeleton />}>
+                    <RelatedLogosSection logo={logo} />
+                </Suspense>
 
                 {/* Main Category List at the bottom */}
                 <CategoryList />
+            </div>
+        </div>
+    );
+}
+
+async function RelatedLogosSection({ logo }: { logo: LogoNode }) {
+    const relatedLogos = await getRelatedLogos(logo);
+
+    if (relatedLogos.length === 0) return null;
+
+    return (
+        <div className="mt-32">
+            <div className="text-center mb-12">
+                <h2 className="text-3xl font-bold text-gray-900">You may also like</h2>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
+                {relatedLogos.map((item: any) => (
+                    <LogoCard key={item.id} logo={item} />
+                ))}
+            </div>
+        </div>
+    );
+}
+
+function RelatedLogosSkeleton() {
+    return (
+        <div className="mt-32 animate-pulse">
+            <div className="text-center mb-12">
+                <div className="h-8 w-44 bg-slate-200 rounded-xl mx-auto" />
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
+                {[...Array(4)].map((_, i) => (
+                    <div key={i} className="aspect-square bg-slate-100 rounded-[1.5rem]" />
+                ))}
             </div>
         </div>
     );
