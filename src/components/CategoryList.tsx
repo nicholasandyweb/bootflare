@@ -13,7 +13,7 @@ export default async function CategoryList() {
     let categories: LogoCategory[] = [];
 
     try {
-        categories = await fetchREST('logo-category?per_page=100&hide_empty=true&_fields=id,name,slug,count');
+        categories = await fetchREST('logos?per_page=100&hide_empty=true&_fields=id,name,slug,count');
     } catch (error) {
         console.error('Error fetching logo categories:', error);
     }

@@ -1,4 +1,4 @@
-const WP_URL = process.env.NEXT_PUBLIC_WORDPRESS_URL || 'https://origin-wp.bootflare.com';
+const WP_URL = process.env.NEXT_PUBLIC_WORDPRESS_URL || 'https://bootflare.com';
 
 // Development-only in-memory cache to prevent "minutes of loading" during local testing
 const devCache = new Map<string, { data: any; timestamp: number }>();

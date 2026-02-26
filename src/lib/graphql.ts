@@ -1,6 +1,6 @@
 import { GraphQLClient } from 'graphql-request';
 
-const WP_GRAPHQL_URL = 'https://origin-wp.bootflare.com/graphql';
+const WP_GRAPHQL_URL = 'https://bootflare.com/graphql';
 const endpoint = process.env.WORDPRESS_GRAPHQL_ENDPOINT || WP_GRAPHQL_URL;
 
 export const client = new GraphQLClient(endpoint, {

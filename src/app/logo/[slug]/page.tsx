@@ -145,7 +145,7 @@ async function getRelatedLogos(logo: LogoNode) {
 
         // Step 2: Fallback to category-based latest if CRP is empty
         const catSlugs = logo.logoCategories?.nodes.map(n => n.slug) || [];
-        const categoryFilter = catSlugs.length > 0 ? `&logo-category=${catSlugs[0]}` : '';
+        const categoryFilter = catSlugs.length > 0 ? `&logos=${catSlugs[0]}` : '';
         const related = await fetchREST(`logo?per_page=4&exclude=${logo.databaseId}${categoryFilter}&_embed&_fields=id,title,slug,_links,_embedded`);
 
         return related.map((l: any) => ({

@@ -72,10 +72,10 @@ export default async function LogoCategoriesArchive() {
     } catch (error) {
         console.warn('GraphQL failed for LogoCategories, falling back to REST:', error);
         try {
-            // Discovered REST taxonomy: logo-category
+            // Discovered REST taxonomy: logos
             const results = await Promise.allSettled([
-                fetchREST('logo-category?per_page=100&hide_empty=true&_fields=id,name,slug,count'),
-                fetchREST('taxonomies/logo-category?_fields=name,description')
+                fetchREST('logos?per_page=100&hide_empty=true&_fields=id,name,slug,count'),
+                fetchREST('taxonomies/logos?_fields=name,description')
             ]);
             if (results[0].status === 'fulfilled') {
                 categories = Array.isArray(results[0].value) ? results[0].value : [];
