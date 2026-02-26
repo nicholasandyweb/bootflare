@@ -13,7 +13,7 @@ export const client = new GraphQLClient(endpoint, {
 export async function fetchGraphQL<T>(query: string, variables?: Record<string, unknown>, retries = 2): Promise<T> {
   for (let i = 0; i < retries; i++) {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 90000); // 90s timeout
+    const timeoutId = setTimeout(() => controller.abort(), 250000); // 250s timeout
 
     try {
       const res = await fetch(endpoint, {
