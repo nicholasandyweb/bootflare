@@ -87,29 +87,16 @@ export default {
 
         // Create a stable cache key
         let cacheUrl = new URL(request.url);
-        // If it's a data request, append a suffix to the path in the cache key
-        // to keep it separate from the HTML version but shared between prefetch/nav.
-        if (isRSC) {
-            // Ensure we don't end up with triple slashes
-            const baseDataPath = cacheUrl.pathname.endsWith('/') ? cacheUrl.pathname.slice(0, -1) : cacheUrl.pathname;
-            cacheUrl.pathname = baseDataPath + '/__data.json';
-        }
+        // We no longer normalize RSC to __data.json because prefetch and nav use different streams.
 
         let cacheKey;
         try {
             cacheKey = new Request(cacheUrl.toString(), {
                 method: request.method,
-                // We strip the intent-specific headers for the cache key so prefetch hits nav
-                headers: (() => {
-                    const h = new Headers(request.headers);
-                    h.delete('Next-Router-Prefetch');
-                    h.delete('Purpose');
-                    return h;
-                })()
+                headers: request.headers
             });
         } catch (e) {
             console.error(`ERROR: Failed to construct cacheKey. cacheUrl: "${cacheUrl.toString()}"`);
-            // Fallback to original request as cache key if normalization fails
             cacheKey = request;
         }
 
@@ -144,26 +131,12 @@ export default {
 
         // Store in cache if status is OK and it's a cacheable method
         if (useCache && response.ok) {
+            // We use standard s-maxage for edge caching, but we don't
+            // override Vary or Force immutable here anymore to avoid 
+            // breaking Next.js hydration and streaming.
             const responseToCache = new Response(response.body, response);
+            responseToCache.headers.set('Cache-Control', 'public, s-maxage=3600');
 
-            // Ensure Cache-Control is set so it actually stays in cache
-            if (isRSC) {
-                // For RSC data, we use immutable caching to prevent browser re-validation
-                responseToCache.headers.set('Cache-Control', 'public, s-maxage=3600, max-age=3600, immutable');
-                // Standardize Vary to 'Accept' to match middleware.ts
-                responseToCache.headers.set('Vary', 'Accept');
-            } else {
-                responseToCache.headers.set('Cache-Control', 'public, s-maxage=3600, max-age=3600');
-                // Prune Vary header to remove RSC/Prefetch noise for HTML too
-                const vary = responseToCache.headers.get('Vary') || '';
-                if (vary.toLowerCase().includes('rsc') || vary.toLowerCase().includes('prefetch')) {
-                    responseToCache.headers.set('Vary', vary.split(',').map(s => s.trim()).filter(s =>
-                        !['rsc', 'next-router-prefetch', 'next-router-state-tree', 'purpose'].includes(s.toLowerCase())
-                    ).join(', '));
-                }
-            }
-
-            // event.waitUntil ensures the worker doesn't terminate before the cache is updated
             ctx.waitUntil(cache.put(cacheKey, responseToCache.clone()));
 
             response = new Response(responseToCache.body, responseToCache);
