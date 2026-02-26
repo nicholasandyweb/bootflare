@@ -28,12 +28,7 @@ interface WPPage {
     content: string;
 }
 
-const FALLBACK_FAQS = [
-    { q: "What is Bootflare?", a: "Bootflare is a cutting-edge digital agency helping businesses build a dominant online presence through elite web design, technical SEO, and data-driven marketing." },
-    { q: "Can I download logos for free?", a: "Yes! Our entire brand logo library is available for free download in high-resolution formats for all your creative and commercial projects." },
-    { q: "Do you offer custom web design?", a: "Absolutely. We specialize in bespoke, customer-focused web experiences designed to maximize conversion rates and return on investment." },
-    { q: "How can I contact support?", a: "Our team is ready to help. You can reach us via our contact page, email, or connect with us on our professional social channels." }
-];
+const FALLBACK_FAQS: { q: string; a: string }[] = [];
 
 export default async function FAQPage() {
     let page: WPPage | null = null;
@@ -46,7 +41,7 @@ export default async function FAQPage() {
 
     const intro = page?.content ? extractFAQIntro(page.content) : '';
     const faqs = page?.content ? parseFAQs(page.content) : [];
-    const displayFaqs = faqs.length > 0 ? faqs : FALLBACK_FAQS;
+    const displayFaqs = faqs;
 
     return (
         <div className="bg-white min-h-screen pt-32 pb-32" suppressHydrationWarning>

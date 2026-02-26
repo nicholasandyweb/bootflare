@@ -31,7 +31,7 @@ export default async function PrivacyPolicyPage() {
   }
 
   if (!page) {
-    return <WPPageContent title="Privacy Policy" content="<p>Content unavailable. Please try again later.</p>" badge="Legal" />;
+    throw new Error('Privacy Policy page content not found');
   }
 
   return <WPPageContent title={page.title} content={page.content} badge="Legal" />;

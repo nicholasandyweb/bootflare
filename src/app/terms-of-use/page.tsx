@@ -31,7 +31,7 @@ export default async function TermsOfUsePage() {
   }
 
   if (!page) {
-    return <WPPageContent title="Terms of Use" content="<p>Content unavailable. Please try again later.</p>" badge="Legal" />;
+    throw new Error('Terms of Use page content not found');
   }
 
   return <WPPageContent title={page.title} content={page.content} badge="Legal" />;

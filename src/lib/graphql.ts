@@ -13,7 +13,7 @@ export const client = new GraphQLClient(endpoint, {
 export async function fetchGraphQL<T>(query: string, variables?: Record<string, unknown>, retries = 2): Promise<T> {
   for (let i = 0; i < retries; i++) {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 45000); // 45s timeout
+    const timeoutId = setTimeout(() => controller.abort(), 90000); // 90s timeout
 
     try {
       const res = await fetch(endpoint, {
@@ -61,14 +61,9 @@ export async function fetchGraphQL<T>(query: string, variables?: Record<string, 
       return json.data;
     } catch (error) {
       clearTimeout(timeoutId);
-      const isBuild = process.env.NODE_ENV === 'production' && process.env.CF_PAGES === '1';
 
-      if (i === retries - 1 || isBuild) {
+      if (i === retries - 1) {
         console.error(`Error fetching from GraphQL API (Attempt ${i + 1}/${retries}):`, error);
-        if (isBuild) {
-          console.warn(`Build-safe fallback triggered for GraphQL`);
-          return {} as any;
-        }
         throw error;
       }
       const waitTime = Math.pow(2, i) * 2000;
@@ -76,5 +71,5 @@ export async function fetchGraphQL<T>(query: string, variables?: Record<string, 
       await new Promise(resolve => setTimeout(resolve, waitTime));
     }
   }
-  return {} as any;
+  throw new Error('Failed to fetch GraphQL API after max retries');
 }

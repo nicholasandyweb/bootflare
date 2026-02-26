@@ -32,21 +32,7 @@ export default async function Home() {
     console.error('Error fetching homepage data:', error);
   }
 
-  // Fallback if data is empty for some reason
-  if (logoImages.length === 0) {
-    logoImages = [
-      "https://bootflare.com/wp-content/uploads/2025/07/Baker-McKenzie-Logo-scaled.png",
-      "https://bootflare.com/wp-content/uploads/2023/02/Airtable-Logo.png",
-      "https://bootflare.com/wp-content/uploads/2024/09/Amazon-Appstore-Logo.png"
-    ];
-  }
 
-  if (musicImages.length === 0) {
-    musicImages = [
-      "https://bootflare.com/wp-content/uploads/2025/08/Dramatic-Music.png",
-      "https://bootflare.com/wp-content/uploads/2025/08/Action-Music.png"
-    ];
-  }
 
   return <HomeClient logos={logoImages} music={musicImages} />;
 }

@@ -48,16 +48,7 @@ export default async function AboutPage() {
     }
 
     if (!page) {
-        return (
-            <div className="bg-slate-50 min-h-screen pt-32 pb-20">
-                <div className="container text-center max-w-2xl px-6">
-                    <h1 className="text-4xl md:text-6xl font-black text-slate-900 mb-8">About <span className="text-gradient">Bootflare</span></h1>
-                    <p className="text-lg text-slate-500 font-light leading-relaxed mb-12">
-                        We are a elite digital agency powering online presence for forward-thinking businesses through customer-focused design and innovation.
-                    </p>
-                </div>
-            </div>
-        );
+        throw new Error('About Us page content not found');
     }
 
     const sanitizedContent = stripUnwantedTerms(stripScripts(page.content));

@@ -62,15 +62,7 @@ export default async function RoyaltyFreeMusicArchive() {
     console.error('Error fetching albums:', error);
   }
 
-  // Fallback for build resilience
-  if (albums.length === 0) {
-    albums = [
-      { id: 1, title: { rendered: 'Dramatic Cinematic' }, slug: 'dramatic-cinematic', excerpt: { rendered: '' } },
-      { id: 2, title: { rendered: 'Corporate Upbeat' }, slug: 'corporate-upbeat', excerpt: { rendered: '' } },
-      { id: 3, title: { rendered: 'Lofi Chill' }, slug: 'lofi-chill', excerpt: { rendered: '' } },
-      { id: 4, title: { rendered: 'Epic Trailer' }, slug: 'epic-trailer', excerpt: { rendered: '' } },
-    ];
-  }
+
 
   const description = seoData?.description
     ? decodeEntities(seoData.description)

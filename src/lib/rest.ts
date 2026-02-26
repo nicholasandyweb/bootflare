@@ -3,7 +3,7 @@ const WP_URL = 'https://bootflare.com';
 // Development-only in-memory cache to prevent "minutes of loading" during local testing
 const devCache = new Map<string, { data: any; timestamp: number }>();
 const CACHE_TTL = 10 * 60 * 1000; // 10 minutes
-const FETCH_TIMEOUT = process.env.NODE_ENV === 'development' ? 120000 : 45000; // 120s dev, 45s prod
+const FETCH_TIMEOUT = 90000; // Increased to 90s for slower WP origins
 
 export async function fetchREST(endpoint: string, retries = 2, namespace = 'wp/v2') {
     const separator = endpoint.includes('?') ? '&' : '?';
@@ -99,21 +99,12 @@ export async function fetchREST(endpoint: string, retries = 2, namespace = 'wp/v
             }
         } catch (error) {
             const isTimeout = error instanceof Error && (error.name === 'AbortError' || error.message.includes('aborted'));
-            const isBuild = process.env.NODE_ENV === 'production' && process.env.CF_PAGES === '1';
 
             if (isTimeout) {
                 console.warn(`Fetch timed out after ${FETCH_TIMEOUT / 1000}s for ${url}`);
-                if (isBuild || i === retries - 1) {
-                    console.warn(`Build-safe fallback triggered for ${url}`);
-                    return []; // Return empty array to keep build moving
-                }
             }
 
             if (i === retries - 1) {
-                if (isBuild) {
-                    console.warn(`Build-safe fallback triggered for non-timeout error: ${url}`);
-                    return [];
-                }
                 throw error;
             }
             const waitTime = Math.pow(2, i) * 1000;
@@ -121,7 +112,7 @@ export async function fetchREST(endpoint: string, retries = 2, namespace = 'wp/v
             await new Promise(resolve => setTimeout(resolve, waitTime));
         }
     }
-    return [];
+    throw new Error(`Failed to fetch from REST API after ${retries} attempts (${url})`);
 }
 
 export async function fetchRESTWithMeta(endpoint: string, retries = 2, namespace = 'wp/v2') {
@@ -224,17 +215,12 @@ export async function fetchRESTWithMeta(endpoint: string, retries = 2, namespace
             }
         } catch (error) {
             const isTimeout = error instanceof Error && (error.name === 'AbortError' || error.message.includes('aborted'));
-            const isBuild = process.env.NODE_ENV === 'production' && process.env.CF_PAGES === '1';
 
             if (isTimeout) {
                 console.warn(`Fetch timed out after ${FETCH_TIMEOUT / 1000}s for ${url}`);
-                if (isBuild || i === retries - 1) {
-                    return { data: [], totalPages: 1, totalItems: 0 };
-                }
             }
 
             if (i === retries - 1) {
-                if (isBuild) return { data: [], totalPages: 1, totalItems: 0 };
                 throw error;
             }
             const waitTime = Math.pow(2, i) * 1000;
@@ -242,5 +228,5 @@ export async function fetchRESTWithMeta(endpoint: string, retries = 2, namespace
             await new Promise(resolve => setTimeout(resolve, waitTime));
         }
     }
-    return { data: [], totalPages: 1, totalItems: 0 };
+    throw new Error(`Failed to fetch from REST API after ${retries} attempts (${url})`);
 }
