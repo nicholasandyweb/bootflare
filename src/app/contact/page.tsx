@@ -20,8 +20,10 @@ interface WPPage {
 export default async function ContactPage() {
   let page: WPPage | null = null;
   try {
-    const data: { page: WPPage } = await fetchGraphQL(GET_CONTACT_PAGE);
-    page = data.page;
+    const data: { page?: WPPage } | null = await fetchGraphQL(GET_CONTACT_PAGE);
+    if (data && data.page) {
+      page = data.page;
+    }
   } catch (error) {
     console.error('Error fetching contact page:', error);
   }

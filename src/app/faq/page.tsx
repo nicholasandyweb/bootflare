@@ -9,8 +9,12 @@ import Accordion from '@/components/ui/Accordion';
 import { parseFAQs, extractFAQIntro } from '@/lib/faq';
 
 export async function generateMetadata(): Promise<Metadata> {
-    const seo = await fetchRankMathSEO('https://bootflare.com/faq/');
-    if (seo) return mapRankMathToMetadata(seo);
+    try {
+        const seo = await fetchRankMathSEO('https://bootflare.com/faq/');
+        if (seo) return mapRankMathToMetadata(seo);
+    } catch (e) {
+        console.error('Metadata fetch failed for faq:', e);
+    }
     return { title: 'FAQ | Bootflare' };
 }
 
@@ -33,14 +37,30 @@ const FALLBACK_FAQS: { q: string; a: string }[] = [];
 export default async function FAQPage() {
     let page: WPPage | null = null;
     try {
-        const data: { page: WPPage } = await fetchGraphQL(GET_FAQ_PAGE);
-        page = data.page;
+        const data: { page?: WPPage } | null = await fetchGraphQL(GET_FAQ_PAGE);
+        if (data && data.page) {
+            page = data.page;
+        }
     } catch (error) {
         console.error('Error fetching FAQ page:', error);
     }
 
-    const intro = page?.content ? extractFAQIntro(page.content) : '';
-    const faqs = page?.content ? parseFAQs(page.content) : [];
+    if (!page) {
+        return (
+            <div className="container py-32 text-center min-h-screen">
+                <h1 className="text-3xl font-bold mb-4 text-slate-800">FAQ Temporarily Unavailable</h1>
+                <p className="text-slate-600 mb-8 max-w-lg mx-auto">
+                    We are currently updating our frequently asked questions. Please check back shortly.
+                </p>
+                <Link href="/" className="inline-block bg-primary text-white font-bold py-3 px-8 rounded-full hover:bg-primary-dark transition-colors">
+                    Return Home
+                </Link>
+            </div>
+        );
+    }
+
+    const intro = page.content ? extractFAQIntro(page.content) : '';
+    const faqs = page.content ? parseFAQs(page.content) : [];
     const displayFaqs = faqs;
 
     return (

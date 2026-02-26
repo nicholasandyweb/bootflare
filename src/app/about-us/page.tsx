@@ -46,8 +46,10 @@ interface Page {
 export default async function AboutPage() {
     let page: Page | null = null;
     try {
-        const data: { page: Page } = await fetchGraphQL(GET_ABOUT_PAGE);
-        page = data.page;
+        const data: { page?: Page } | null = await fetchGraphQL(GET_ABOUT_PAGE);
+        if (data && data.page) {
+            page = data.page;
+        }
     } catch (error) {
         console.error('Error fetching about page:', error);
     }

@@ -29,8 +29,10 @@ interface WPPage { title: string; content: string; }
 export default async function DMCAPolicyPage() {
   let page: WPPage | null = null;
   try {
-    const data: { page: WPPage } = await fetchGraphQL(QUERY);
-    page = data.page;
+    const data: { page?: WPPage } | null = await fetchGraphQL(QUERY);
+    if (data && data.page) {
+      page = data.page;
+    }
   } catch (e) {
     console.error('Error fetching DMCA Policy:', e);
   }
