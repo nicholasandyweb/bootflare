@@ -8,6 +8,7 @@ import { fetchRankMathSEO, mapRankMathToMetadata, mapWPToMetadata } from '@/lib/
 import { cache } from 'react';
 
 export const dynamicParams = true;
+export const dynamic = 'force-dynamic';
 
 const GET_POST_BY_SLUG = `
   query GetPostBySlug($slug: ID!) {

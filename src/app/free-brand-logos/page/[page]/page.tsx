@@ -1,4 +1,5 @@
 export const revalidate = 3600;
+export const dynamic = 'force-dynamic';
 import LogosTemplate from '@/components/LogosTemplate';
 import { fetchRankMathSEO, mapRankMathToMetadata } from '@/lib/seo';
 import { Metadata } from 'next';
@@ -13,29 +14,7 @@ export async function generateMetadata(): Promise<Metadata> {
     return { title: 'Free Brand Logos | Bootflare' };
 }
 
-export async function generateStaticParams() {
-    try {
-        const response = await fetch('https://bootflare.com/wp-json/wp/v2/logo?per_page=12&_fields=id', {
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
-            }
-        });
-        const totalPagesStr = response.headers.get('x-wp-totalpages');
-        const totalPages = totalPagesStr ? parseInt(totalPagesStr, 10) : 1;
-
-        if (totalPages <= 1) return [];
-
-        return Array.from({ length: totalPages - 1 }, (_, i) => ({
-            page: (i + 2).toString(),
-        }));
-    } catch (e) {
-        console.error('Failed to generate static params for /free-brand-logos:', e);
-        return [];
-    }
-}
-
-
-
+export const dynamicParams = true;
 export default async function FreeLogosPaginated({ params }: { params: Promise<{ page: string }> }) {
     const { page: pageStr } = await params;
     const page = parseInt(pageStr, 10);

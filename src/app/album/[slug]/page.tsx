@@ -1,4 +1,6 @@
 export const revalidate = 3600;
+export const dynamic = 'force-dynamic';
+export const dynamicParams = true;
 import { fetchREST } from '@/lib/rest';
 import Link from 'next/link';
 import { ChevronLeft, Play, Music, Headphones, Share2, Sparkles, Clock, Calendar, Download } from 'lucide-react';

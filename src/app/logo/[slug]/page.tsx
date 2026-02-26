@@ -13,6 +13,7 @@ import { fetchGraphQL } from '@/lib/graphql';
 
 // Rendered on-demand via Cloudflare's edge network on every request.
 export const dynamicParams = true;
+export const dynamic = 'force-dynamic';
 
 const GET_LOGO_BY_SLUG = `
   query GetLogoBySlug($slug: ID!) {

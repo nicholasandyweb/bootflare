@@ -6,6 +6,7 @@ import { Calendar, ChevronRight, Hash, AlertTriangle } from 'lucide-react';
 import { Metadata } from 'next';
 
 export const dynamicParams = true;
+export const dynamic = 'force-dynamic';
 
 const GET_CATEGORY_POSTS = `
   query GetCategoryPosts($slug: ID!) {

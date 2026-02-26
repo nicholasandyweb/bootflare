@@ -1,4 +1,5 @@
-export const revalidate = 3600; // 1 hour
+export const revalidate = 3600;
+export const dynamic = 'force-dynamic'; // 1 hour
 import { fetchRESTWithMeta } from '@/lib/rest';
 import { fetchGraphQL } from '@/lib/graphql';
 import Link from 'next/link';
@@ -28,29 +29,7 @@ export async function generateMetadata({ params }: { params: Promise<{ page: str
     return metadata;
 }
 
-export async function generateStaticParams() {
-    try {
-        const response = await fetch('https://bootflare.com/wp-json/wp/v2/sr_playlist?per_page=12&_fields=id', {
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
-            }
-        });
-        const totalPagesStr = response.headers.get('x-wp-totalpages');
-        const totalPages = totalPagesStr ? parseInt(totalPagesStr, 10) : 1;
-
-        if (totalPages <= 1) return [];
-
-        return Array.from({ length: totalPages - 1 }, (_, i) => ({
-            page: (i + 2).toString(),
-        }));
-    } catch (e) {
-        console.error('Failed to generate static params for /royalty-free-music:', e);
-        return [];
-    }
-}
-
-
-
+export const dynamicParams = true;
 interface Album {
     id: number;
     title: { rendered: string };
