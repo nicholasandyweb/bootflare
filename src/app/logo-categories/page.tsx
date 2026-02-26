@@ -58,7 +58,7 @@ export default async function LogoCategoriesArchive() {
             fetchRankMathSEO('https://bootflare.com/logo-categories/')
         ]);
 
-        if (gqlData) {
+        if (gqlData && gqlData.categories) {
             categories = gqlData.categories.nodes.map(node => ({
                 id: node.databaseId,
                 name: node.name,
@@ -72,9 +72,10 @@ export default async function LogoCategoriesArchive() {
     } catch (error) {
         console.warn('GraphQL failed for LogoCategories, falling back to REST:', error);
         try {
+            // Discovered REST taxonomy: logos (not logo_category)
             const results = await Promise.allSettled([
-                fetchREST('logo_category?per_page=100&hide_empty=true&_fields=id,name,slug,count'),
-                fetchREST('taxonomies/logo_category?_fields=name,description')
+                fetchREST('logos?per_page=100&hide_empty=true&_fields=id,name,slug,count'),
+                fetchREST('taxonomies/logos?_fields=name,description')
             ]);
             if (results[0].status === 'fulfilled') categories = results[0].value as LogoCategory[];
             if (results[1].status === 'fulfilled') taxonomyMeta = results[1].value;

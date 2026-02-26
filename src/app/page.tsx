@@ -14,7 +14,7 @@ import { fetchGraphQL } from '@/lib/graphql';
 
 const GET_HOME_DATA = `
   query GetHomeData {
-    logos(first: 3) {
+    logos(first: 20) {
       nodes {
         featuredImage {
           node {
@@ -23,7 +23,7 @@ const GET_HOME_DATA = `
         }
       }
     }
-    music: srPlaylists(first: 3) {
+    music: srPlaylists(first: 10) {
       nodes {
         featuredImage {
           node {

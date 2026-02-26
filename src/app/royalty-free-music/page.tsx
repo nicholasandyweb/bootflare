@@ -70,38 +70,32 @@ export default async function RoyaltyFreeMusicArchive() {
 
   try {
     const offset = (page - 1) * perPage;
-    const [gqlData, seo] = await Promise.all([
-      fetchGraphQL<MusicData>(GET_MUSIC_DATA, { offset, size: perPage }),
+
+    // HYBRID APPROACH:
+    // 1. Use REST for paginated lists (due to missing offsetPagination plugin)
+    // 2. Use GraphQL for metadata/SEO
+    const [restResult, seo] = await Promise.all([
+      fetchRESTWithMeta(`sr_playlist?per_page=12&page=${page}&_embed&_fields=id,title,slug,excerpt,_links,_embedded`),
       fetchRankMathSEO('https://bootflare.com/royalty-free-music/')
     ]);
 
-    if (gqlData && gqlData.playlists) {
-      albums = gqlData.playlists.nodes.map(node => ({
-        id: node.databaseId,
-        title: { rendered: node.title },
-        slug: node.slug,
-        excerpt: { rendered: node.excerpt },
-        _embedded: {
-          'wp:featuredmedia': node.featuredImage ? [{ source_url: node.featuredImage.node.sourceUrl }] : []
-        }
-      }));
-      totalPages = Math.ceil(gqlData.playlists.pageInfo.offsetPagination.total / perPage);
-      wpData = { page: gqlData.page || { title: 'Royalty Free Music' } };
-    }
+    albums = restResult.data;
+    totalPages = restResult.totalPages;
     seoData = seo;
+
+    // Optional: Fetch page title/excerpt via GraphQL if needed
+    const pageMeta = await fetchGraphQL<{ page: { title: string; excerpt?: string } }>(`
+      query GetMusicPageMeta {
+        page(id: "/royalty-free-music/", idType: URI) {
+          title
+          excerpt
+        }
+      }
+    `).catch(() => null);
+
+    wpData = { page: pageMeta?.page || { title: 'Royalty Free Music' } };
   } catch (error) {
-    console.warn('GraphQL failed for RoyaltyFreeMusic, falling back to REST:', error);
-    try {
-      const [res, seo] = await Promise.all([
-        fetchRESTWithMeta(`sr_playlist?per_page=12&page=${page}&_embed&_fields=id,title,slug,excerpt,_links,_embedded`),
-        fetchRankMathSEO('https://bootflare.com/royalty-free-music/')
-      ]);
-      albums = res.data;
-      totalPages = res.totalPages;
-      seoData = seo;
-    } catch (e) {
-      console.error('Final REST fallback failed:', e);
-    }
+    console.error('Hybrid fetching failed for RoyaltyFreeMusic:', error);
   }
 
 

@@ -55,7 +55,7 @@ export default async function LogoCollectionsArchive() {
             fetchRankMathSEO('https://bootflare.com/logo-collections/')
         ]);
 
-        if (gqlData) {
+        if (gqlData && gqlData.collections) {
             collections = gqlData.collections.nodes.map(node => ({
                 id: node.databaseId,
                 name: node.name,
@@ -69,6 +69,7 @@ export default async function LogoCollectionsArchive() {
     } catch (error) {
         console.warn('GraphQL failed for LogoCollections, falling back to REST:', error);
         try {
+            // Discovered REST taxonomy: logo-collection
             const results = await Promise.allSettled([
                 fetchREST('logo-collection?per_page=100&hide_empty=true&_fields=id,name,slug,count'),
                 fetchREST('taxonomies/logo-collection?_fields=name,description')

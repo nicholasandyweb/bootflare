@@ -76,36 +76,22 @@ export default async function LogosTemplate({
 
     const offset = (page - 1) * perPage;
 
+    // HYBRID APPROACH:
+    // 1. Use REST for the paginated list (because WPGraphQL lacks offsetPagination plugin)
+    // 2. Use GraphQL for metadata (stable and fast)
     const [logosResult, pageResult, seoResult] = await Promise.allSettled([
-        fetchGraphQL<{ logos: { nodes: any[], pageInfo: { offsetPagination: { total: number } } } }>(GET_LOGOS_QUERY, { offset, size: perPage }),
+        fetchRESTWithMeta(`logo?per_page=${perPage}&page=${page}&_embed&_fields=id,title,slug,_links,_embedded`),
         fetchGraphQL<{ page: any }>(GET_PAGE_QUERY(queryId)),
         fetchRankMathSEO(seoUrl),
     ]);
 
-    if (logosResult.status === 'fulfilled' && logosResult.value.logos) {
-        logos = logosResult.value.logos.nodes.map(node => ({
-            id: node.databaseId,
-            title: { rendered: node.title },
-            slug: node.slug,
-            _embedded: {
-                'wp:featuredmedia': node.featuredImage ? [{
-                    source_url: node.featuredImage.node.sourceUrl,
-                    alt_text: node.featuredImage.node.altText
-                }] : []
-            }
-        }));
-        const totalItems = logosResult.value.logos.pageInfo.offsetPagination.total;
-        totalPages = Math.ceil(totalItems / perPage);
+    if (logosResult.status === 'fulfilled' && logosResult.value.data) {
+        logos = logosResult.value.data;
+        totalPages = logosResult.value.totalPages;
     } else {
-        console.warn(`GraphQL fetching failed for ${route}, falling back to REST:`, logosResult.status === 'rejected' ? logosResult.reason : 'No data');
-        try {
-            const res = await fetchRESTWithMeta(`logo?per_page=${perPage}&page=${page}&_embed&_fields=id,title,slug,_links,_embedded`);
-            logos = res.data;
-            totalPages = res.totalPages;
-        } catch (e) {
-            console.error('Final fallback to REST also failed:', e);
-        }
+        console.error(`REST fetching failed for ${route}:`, logosResult.status === 'rejected' ? logosResult.reason : 'No data');
     }
+
     wpPage = pageResult.status === 'fulfilled' ? (pageResult.value?.page ?? null) : null;
     seoData = seoResult.status === 'fulfilled' ? seoResult.value : null;
 
