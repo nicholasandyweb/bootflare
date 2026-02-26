@@ -65,7 +65,7 @@ export default async function LogoCategory({ params }: { params: Promise<{ slug:
         const offset = (page - 1) * perPage;
         const data = await fetchGraphQL<CategoryData>(GET_CATEGORY_DATA, { slug, offset, size: perPage });
 
-        if (data.logoCategory) {
+        if (data && data.logoCategory) {
             const cat = data.logoCategory;
             categoryName = cat.name;
             categoryDescription = cat.description || '';
@@ -81,6 +81,8 @@ export default async function LogoCategory({ params }: { params: Promise<{ slug:
                 }
             }));
             totalPages = Math.ceil(cat.logos.pageInfo.offsetPagination.total / perPage);
+        } else {
+            throw new Error('GraphQL returned no data for category');
         }
     } catch (error) {
         console.warn('GraphQL failed for LogoCategory, falling back to REST:', error);

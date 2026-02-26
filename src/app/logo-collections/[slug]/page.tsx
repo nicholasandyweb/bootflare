@@ -64,7 +64,7 @@ export default async function LogoCollectionPage({ params }: { params: Promise<{
         const offset = (page - 1) * perPage;
         const data = await fetchGraphQL<CollectionData>(GET_COLLECTION_DATA, { slug, offset, size: perPage });
 
-        if (data.logoCollection) {
+        if (data && data.logoCollection) {
             const col = data.logoCollection;
             collectionName = col.name;
             collectionDescription = col.description || '';
@@ -80,6 +80,8 @@ export default async function LogoCollectionPage({ params }: { params: Promise<{
                 }
             }));
             totalPages = Math.ceil(col.logos.pageInfo.offsetPagination.total / perPage);
+        } else {
+            throw new Error('GraphQL returned no data for collection');
         }
     } catch (error) {
         console.warn('GraphQL failed for LogoCollection, falling back to REST:', error);

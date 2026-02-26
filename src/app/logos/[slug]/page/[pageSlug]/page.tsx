@@ -65,7 +65,7 @@ export default async function LogoCategoryPaginated({ params }: { params: Promis
         const offset = (page - 1) * perPage;
         const data = await fetchGraphQL<CategoryData>(GET_CATEGORY_DATA, { slug, offset, size: perPage });
 
-        if (data.logoCategory) {
+        if (data && data.logoCategory) {
             const cat = data.logoCategory;
             categoryName = cat.name;
             categoryDescription = cat.description || '';
@@ -81,16 +81,18 @@ export default async function LogoCategoryPaginated({ params }: { params: Promis
                 }
             }));
             totalPages = Math.ceil(cat.logos.pageInfo.offsetPagination.total / perPage);
+        } else {
+            throw new Error('GraphQL returned no data for category');
         }
     } catch (error) {
         console.warn('GraphQL failed for LogoCategoryPaginated, falling back to REST:', error);
         try {
-            const categories = await fetchREST(`logo_category?slug=${slug}&_fields=id,name,description`);
+            const categories = await fetchREST(`logos?slug=${slug}&_fields=id,name,description`);
             if (categories.length > 0) {
                 const catId = categories[0].id;
                 categoryName = categories[0].name;
                 categoryDescription = categories[0].description || '';
-                const res = await fetchRESTWithMeta(`logo?logo_category=${catId}&per_page=${perPage}&page=${page}&_embed&_fields=id,title,slug,_links,_embedded`);
+                const res = await fetchRESTWithMeta(`logo?logos=${catId}&per_page=${perPage}&page=${page}&_embed&_fields=id,title,slug,_links,_embedded`);
                 logos = res.data;
                 totalPages = res.totalPages;
             }

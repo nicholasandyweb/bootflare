@@ -80,6 +80,8 @@ export default async function LogoCollectionPaginated({ params }: { params: Prom
                 }
             }));
             totalPages = Math.ceil(col.logos.pageInfo.offsetPagination.total / perPage);
+        } else {
+            throw new Error('GraphQL returned no data for collection');
         }
     } catch (error) {
         console.warn('GraphQL failed for LogoCollectionPaginated, falling back to REST:', error);
