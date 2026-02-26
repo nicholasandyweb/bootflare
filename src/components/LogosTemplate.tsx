@@ -30,6 +30,29 @@ interface LogosTemplateProps {
     perPage?: number;
 }
 
+const GET_LOGOS_QUERY = `
+  query GetLogos($offset: Int, $size: Int) {
+    logos(where: { offsetPagination: { offset: $offset, size: $size } }) {
+      pageInfo {
+        offsetPagination {
+          total
+        }
+      }
+      nodes {
+        databaseId
+        title
+        slug
+        featuredImage {
+          node {
+            sourceUrl
+            altText
+          }
+        }
+      }
+    }
+  }
+`;
+
 const GET_PAGE_QUERY = (id: string) => `
   query GetPageMeta {
     page(id: "${id}", idType: URI) {
@@ -46,22 +69,42 @@ export default async function LogosTemplate({
     seoUrl,
     perPage = 12,
 }: LogosTemplateProps) {
-    let logos: Logo[] = [];
+    let logos: any[] = [];
     let totalPages = 1;
     let wpPage: { title: string; excerpt?: string } | null = null;
     let seoData: any = null;
 
+    const offset = (page - 1) * perPage;
+
     const [logosResult, pageResult, seoResult] = await Promise.allSettled([
-        fetchRESTWithMeta(`logo?per_page=${perPage}&page=${page}&_embed&_fields=id,title,slug,_links,_embedded`),
+        fetchGraphQL<{ logos: { nodes: any[], pageInfo: { offsetPagination: { total: number } } } }>(GET_LOGOS_QUERY, { offset, size: perPage }),
         fetchGraphQL<{ page: any }>(GET_PAGE_QUERY(queryId)),
         fetchRankMathSEO(seoUrl),
     ]);
 
-    if (logosResult.status === 'fulfilled') {
-        logos = logosResult.value.data;
-        totalPages = logosResult.value.totalPages;
+    if (logosResult.status === 'fulfilled' && logosResult.value.logos) {
+        logos = logosResult.value.logos.nodes.map(node => ({
+            id: node.databaseId,
+            title: { rendered: node.title },
+            slug: node.slug,
+            _embedded: {
+                'wp:featuredmedia': node.featuredImage ? [{
+                    source_url: node.featuredImage.node.sourceUrl,
+                    alt_text: node.featuredImage.node.altText
+                }] : []
+            }
+        }));
+        const totalItems = logosResult.value.logos.pageInfo.offsetPagination.total;
+        totalPages = Math.ceil(totalItems / perPage);
     } else {
-        console.error(`Error fetching logos for ${route}:`, logosResult.reason);
+        console.warn(`GraphQL fetching failed for ${route}, falling back to REST:`, logosResult.status === 'rejected' ? logosResult.reason : 'No data');
+        try {
+            const res = await fetchRESTWithMeta(`logo?per_page=${perPage}&page=${page}&_embed&_fields=id,title,slug,_links,_embedded`);
+            logos = res.data;
+            totalPages = res.totalPages;
+        } catch (e) {
+            console.error('Final fallback to REST also failed:', e);
+        }
     }
     wpPage = pageResult.status === 'fulfilled' ? (pageResult.value?.page ?? null) : null;
     seoData = seoResult.status === 'fulfilled' ? seoResult.value : null;

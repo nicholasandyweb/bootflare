@@ -8,6 +8,31 @@ import LogoCard from '@/components/LogoCard';
 import CategoryList from '@/components/CategoryList';
 import Pagination from '@/components/Pagination';
 import LogosTemplate from '@/components/LogosTemplate';
+import { fetchGraphQL } from '@/lib/graphql';
+
+const SEARCH_LOGOS_QUERY = `
+  query SearchLogos($search: String, $offset: Int, $size: Int) {
+    logos(where: { search: $search, offsetPagination: { offset: $offset, size: $size } }) {
+      pageInfo {
+        offsetPagination {
+          total
+        }
+      }
+      nodes {
+        databaseId
+        title
+        slug
+        featuredImage {
+          node {
+            sourceUrl
+            altText
+          }
+        }
+      }
+    }
+  }
+`;
+
 
 interface Logo {
   id: number;
@@ -55,13 +80,37 @@ export default async function LogoArchive({ searchParams }: { searchParams: Prom
   let totalPages = 1;
 
   try {
-    const res = await fetchRESTWithMeta(
-      `logo?search=${encodeURIComponent(searchTerm)}&per_page=24&page=${page}&_embed`
+    const offset = (page - 1) * 24;
+    const data = await fetchGraphQL<{ logos: { nodes: any[], pageInfo: { offsetPagination: { total: number } } } }>(
+      SEARCH_LOGOS_QUERY,
+      { search: searchTerm, offset, size: 24 }
     );
-    logos = Array.from(new Map(res.data.map((item: any) => [item.id, item])).values()) as Logo[];
-    totalPages = res.totalPages;
+
+    if (data.logos) {
+      logos = data.logos.nodes.map(node => ({
+        id: node.databaseId,
+        title: { rendered: node.title },
+        slug: node.slug,
+        _embedded: {
+          'wp:featuredmedia': node.featuredImage ? [{
+            source_url: node.featuredImage.node.sourceUrl,
+            alt_text: node.featuredImage.node.altText
+          }] : []
+        }
+      }));
+      totalPages = Math.ceil(data.logos.pageInfo.offsetPagination.total / 24);
+    }
   } catch (error) {
-    console.error('Error fetching logos:', error);
+    console.error('Error fetching logos via GraphQL, falling back to REST:', error);
+    try {
+      const res = await fetchRESTWithMeta(
+        `logo?search=${encodeURIComponent(searchTerm)}&per_page=24&page=${page}&_embed`
+      );
+      logos = Array.from(new Map(res.data.map((item: any) => [item.id, item])).values()) as Logo[];
+      totalPages = res.totalPages;
+    } catch (e) {
+      console.error('Final REST fallback failed:', e);
+    }
   }
 
   return (

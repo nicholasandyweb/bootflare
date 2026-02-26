@@ -7,7 +7,30 @@ import MusicPlayer from '@/components/MusicPlayer';
 import Pagination from '@/components/Pagination';
 import FileInfoCard from '@/components/FileInfoCard';
 
-export const dynamicParams = true;
+import { fetchGraphQL } from '@/lib/graphql';
+
+const GET_ALBUM_BY_SLUG = `
+  query GetAlbumBySlug($slug: ID!) {
+    playlist: srPlaylist(id: $slug, idType: SLUG) {
+      databaseId
+      title
+      content
+      date
+      slug
+      featuredImage {
+        node {
+          sourceUrl
+        }
+      }
+      srPlaylistCategories {
+        nodes {
+          name
+          slug
+        }
+      }
+    }
+  }
+`;
 
 interface Track {
     id: number;
@@ -18,29 +41,22 @@ interface Track {
     poster: string;
 }
 
-interface PlaylistData {
-    tracks: Track[];
-}
-
-interface Album {
-    id: number;
-    title: {
-        rendered: string;
-    };
-    content: {
-        rendered: string;
-    };
+interface AlbumNode {
+    databaseId: number;
+    title: string;
+    content: string;
     date: string;
     slug: string;
-    description?: string;
-    _embedded?: {
-        'wp:featuredmedia'?: {
-            source_url: string;
-        }[];
-        'wp:term'?: {
+    featuredImage?: {
+        node: {
+            sourceUrl: string;
+        }
+    };
+    srPlaylistCategories?: {
+        nodes: {
             name: string;
             slug: string;
-        }[][];
+        }[];
     };
 }
 
@@ -50,19 +66,41 @@ export default async function SingleMusic({ params, searchParams }: { params: Pr
     const currentPage = parseInt(page || '1', 10);
     const perPage = 10;
 
-    let album: Album | null = null;
+    let album: any = null;
     let allTracks: Track[] = [];
 
     try {
-        const albums = await fetchREST(`sr_playlist?slug=${slug}&_embed&_fields=id,title,content,date,slug,_links,_embedded`);
-        if (albums.length > 0) {
-            const fetchedAlbum = albums[0];
-            album = fetchedAlbum;
-            const trackData = await fetchREST(`https://bootflare.com/?load=playlist.json&albums=${fetchedAlbum.id}`);
+        const data = await fetchGraphQL<{ playlist: AlbumNode }>(GET_ALBUM_BY_SLUG, { slug });
+        if (data.playlist) {
+            const p = data.playlist;
+            album = {
+                id: p.databaseId,
+                title: { rendered: p.title },
+                content: { rendered: p.content },
+                date: p.date,
+                slug: p.slug,
+                _embedded: {
+                    'wp:featuredmedia': p.featuredImage ? [{ source_url: p.featuredImage.node.sourceUrl }] : [],
+                    'wp:term': [p.srPlaylistCategories?.nodes || []]
+                }
+            };
+
+            const trackData = await fetchREST(`https://bootflare.com/?load=playlist.json&albums=${p.databaseId}`);
             allTracks = trackData.tracks || [];
         }
     } catch (error) {
-        console.error('Error fetching music album:', error);
+        console.warn('GraphQL failed for Album page, falling back to REST:', error);
+        try {
+            const albums = await fetchREST(`sr_playlist?slug=${slug}&_embed&_fields=id,title,content,date,slug,_links,_embedded`);
+            if (albums.length > 0) {
+                const fetchedAlbum = albums[0];
+                album = fetchedAlbum;
+                const trackData = await fetchREST(`https://bootflare.com/?load=playlist.json&albums=${fetchedAlbum.id}`);
+                allTracks = trackData.tracks || [];
+            }
+        } catch (e) {
+            console.error('Final REST fallback failed:', e);
+        }
     }
 
     if (!album) {
@@ -113,7 +151,7 @@ export default async function SingleMusic({ params, searchParams }: { params: Pr
                         {/* Meta & Actions */}
                         <div className="flex-1">
                             <div className="flex flex-wrap justify-center lg:justify-start gap-2 mb-6 uppercase tracking-widest font-bold text-[10px] text-primary">
-                                {categories.map((cat) => (
+                                {categories.map((cat: any) => (
                                     <span key={cat.slug} className="bg-white px-4 py-1.5 rounded-full border border-pink-100 shadow-sm">
                                         {cat.name}
                                     </span>

@@ -7,44 +7,94 @@ import LogoSearch from '@/components/LogoSearch';
 
 export const dynamicParams = true;
 
-interface Logo {
-    id: number;
-    title: {
-        rendered: string;
-    };
-    slug: string;
-    _embedded?: {
-        'wp:featuredmedia'?: {
-            source_url: string;
-            alt_text?: string;
-        }[];
-    };
-}
+import { fetchGraphQL } from '@/lib/graphql';
 
+const GET_COLLECTION_DATA = `
+  query GetLogoCollectionWithLogos($slug: ID!, $offset: Int, $size: Int) {
+    logoCollection(id: $slug, idType: SLUG) {
+      databaseId
+      name
+      description
+      logos(where: { offsetPagination: { offset: $offset, size: $size } }) {
+        pageInfo {
+          offsetPagination {
+            total
+          }
+        }
+        nodes {
+          databaseId
+          title
+          slug
+          featuredImage {
+            node {
+              sourceUrl
+              altText
+            }
+          }
+        }
+      }
+    }
+  }
+`;
+
+interface CollectionData {
+    logoCollection: {
+        databaseId: number;
+        name: string;
+        description?: string;
+        logos: {
+            nodes: any[];
+            pageInfo: { offsetPagination: { total: number } };
+        };
+    } | null;
+}
 
 export default async function LogoCollectionPage({ params }: { params: Promise<{ slug: string }> }) {
     const { slug } = await params;
     const page = 1;
+    const perPage = 12;
 
-    let logos: Logo[] = [];
+    let logos: any[] = [];
     let collectionName = slug;
     let collectionDescription = '';
     let totalPages = 1;
 
     try {
-        // First find the collection ID by slug
-        const collections = await fetchREST(`logo-collection?slug=${slug}&_fields=id,name,description`);
-        if (collections.length > 0) {
-            const colId = collections[0].id;
-            collectionName = collections[0].name;
-            collectionDescription = collections[0].description || '';
-            // Then fetch logos with that collection
-            const res = await fetchRESTWithMeta(`logo?logo-collection=${colId}&per_page=12&page=${page}&_embed&_fields=id,title,slug,_links,_embedded`);
-            logos = res.data;
-            totalPages = res.totalPages;
+        const offset = (page - 1) * perPage;
+        const data = await fetchGraphQL<CollectionData>(GET_COLLECTION_DATA, { slug, offset, size: perPage });
+
+        if (data.logoCollection) {
+            const col = data.logoCollection;
+            collectionName = col.name;
+            collectionDescription = col.description || '';
+            logos = col.logos.nodes.map(node => ({
+                id: node.databaseId,
+                title: { rendered: node.title },
+                slug: node.slug,
+                _embedded: {
+                    'wp:featuredmedia': node.featuredImage ? [{
+                        source_url: node.featuredImage.node.sourceUrl,
+                        alt_text: node.featuredImage.node.altText
+                    }] : []
+                }
+            }));
+            totalPages = Math.ceil(col.logos.pageInfo.offsetPagination.total / perPage);
         }
     } catch (error) {
-        console.error('Error fetching collection logos:', error);
+        console.warn('GraphQL failed for LogoCollection, falling back to REST:', error);
+        try {
+            const collections = await fetchREST(`logo-collection?slug=${slug}&_fields=id,name,description`);
+            if (collections.length > 0) {
+                const colId = collections[0].id;
+                collectionName = collections[0].name;
+                collectionDescription = collections[0].description || '';
+                const res = await fetchRESTWithMeta(`logo?logo-collection=${colId}&per_page=${perPage}&page=${page}&_embed&_fields=id,title,slug,_links,_embedded`);
+                logos = res.data;
+                totalPages = res.totalPages;
+            }
+        } catch (e) {
+            console.error('Final REST fallback failed:', e);
+        }
     }
 
     return (

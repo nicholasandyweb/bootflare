@@ -27,8 +27,26 @@ interface Album {
   };
 }
 
-const GET_PAGE_DATA = `
-  query GetMusicPage {
+const GET_MUSIC_DATA = `
+  query GetMusicArchive($offset: Int, $size: Int) {
+    playlists: srPlaylists(where: { offsetPagination: { offset: $offset, size: $size } }) {
+      pageInfo {
+        offsetPagination {
+          total
+        }
+      }
+      nodes {
+        databaseId
+        title
+        slug
+        excerpt
+        featuredImage {
+          node {
+            sourceUrl
+          }
+        }
+      }
+    }
     page(id: "/royalty-free-music/", idType: URI) {
         title
         excerpt
@@ -36,30 +54,54 @@ const GET_PAGE_DATA = `
   }
 `;
 
-interface WPData {
-  page: { title: string; excerpt?: string };
+interface MusicData {
+  playlists: { nodes: any[], pageInfo: { offsetPagination: { total: number } } };
+  page: { title: string; excerpt?: string } | null;
 }
 
 export default async function RoyaltyFreeMusicArchive() {
   const page = 1;
+  const perPage = 12;
 
-  let albums: Album[] = [];
-  let wpData: WPData | null = null;
+  let albums: any[] = [];
+  let wpData: { page: { title: string; excerpt?: string } } | null = null;
   let seoData: any = null;
   let totalPages = 1;
 
   try {
-    const [res, data, seo] = await Promise.all([
-      fetchRESTWithMeta(`sr_playlist?per_page=12&page=${page}&_embed&_fields=id,title,slug,excerpt,_links,_embedded`),
-      fetchGraphQL<WPData>(GET_PAGE_DATA),
+    const offset = (page - 1) * perPage;
+    const [gqlData, seo] = await Promise.all([
+      fetchGraphQL<MusicData>(GET_MUSIC_DATA, { offset, size: perPage }),
       fetchRankMathSEO('https://bootflare.com/royalty-free-music/')
     ]);
-    albums = res.data;
-    totalPages = res.totalPages;
-    wpData = data;
+
+    if (gqlData && gqlData.playlists) {
+      albums = gqlData.playlists.nodes.map(node => ({
+        id: node.databaseId,
+        title: { rendered: node.title },
+        slug: node.slug,
+        excerpt: { rendered: node.excerpt },
+        _embedded: {
+          'wp:featuredmedia': node.featuredImage ? [{ source_url: node.featuredImage.node.sourceUrl }] : []
+        }
+      }));
+      totalPages = Math.ceil(gqlData.playlists.pageInfo.offsetPagination.total / perPage);
+      wpData = { page: gqlData.page || { title: 'Royalty Free Music' } };
+    }
     seoData = seo;
   } catch (error) {
-    console.error('Error fetching albums:', error);
+    console.warn('GraphQL failed for RoyaltyFreeMusic, falling back to REST:', error);
+    try {
+      const [res, seo] = await Promise.all([
+        fetchRESTWithMeta(`sr_playlist?per_page=12&page=${page}&_embed&_fields=id,title,slug,excerpt,_links,_embedded`),
+        fetchRankMathSEO('https://bootflare.com/royalty-free-music/')
+      ]);
+      albums = res.data;
+      totalPages = res.totalPages;
+      seoData = seo;
+    } catch (e) {
+      console.error('Final REST fallback failed:', e);
+    }
   }
 
 

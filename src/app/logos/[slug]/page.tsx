@@ -8,44 +8,94 @@ import CategoryList from '@/components/CategoryList';
 
 export const dynamicParams = true;
 
-interface Logo {
-    id: number;
-    title: {
-        rendered: string;
-    };
-    slug: string;
-    _embedded?: {
-        'wp:featuredmedia'?: {
-            source_url: string;
-            alt_text?: string;
-        }[];
-    };
-}
+import { fetchGraphQL } from '@/lib/graphql';
 
+const GET_CATEGORY_DATA = `
+  query GetLogoCategoryWithLogos($slug: ID!, $offset: Int, $size: Int) {
+    logoCategory(id: $slug, idType: SLUG) {
+      databaseId
+      name
+      description
+      logos(where: { offsetPagination: { offset: $offset, size: $size } }) {
+        pageInfo {
+          offsetPagination {
+            total
+          }
+        }
+        nodes {
+          databaseId
+          title
+          slug
+          featuredImage {
+            node {
+              sourceUrl
+              altText
+            }
+          }
+        }
+      }
+    }
+  }
+`;
+
+interface CategoryData {
+    logoCategory: {
+        databaseId: number;
+        name: string;
+        description?: string;
+        logos: {
+            nodes: any[];
+            pageInfo: { offsetPagination: { total: number } };
+        };
+    } | null;
+}
 
 export default async function LogoCategory({ params }: { params: Promise<{ slug: string }> }) {
     const { slug } = await params;
     const page = 1;
+    const perPage = 16;
 
-    let logos: Logo[] = [];
+    let logos: any[] = [];
     let categoryName = slug;
     let categoryDescription = '';
     let totalPages = 1;
 
     try {
-        // First find the category ID by slug
-        const categories = await fetchREST(`logos?slug=${slug}&_fields=id,name,description`);
-        if (categories.length > 0) {
-            const catId = categories[0].id;
-            categoryName = categories[0].name;
-            categoryDescription = categories[0].description || '';
-            // Then fetch logos with that category
-            const res = await fetchRESTWithMeta(`logo?logos=${catId}&per_page=16&page=${page}&_embed&_fields=id,title,slug,_links,_embedded`);
-            logos = res.data;
-            totalPages = res.totalPages;
+        const offset = (page - 1) * perPage;
+        const data = await fetchGraphQL<CategoryData>(GET_CATEGORY_DATA, { slug, offset, size: perPage });
+
+        if (data.logoCategory) {
+            const cat = data.logoCategory;
+            categoryName = cat.name;
+            categoryDescription = cat.description || '';
+            logos = cat.logos.nodes.map(node => ({
+                id: node.databaseId,
+                title: { rendered: node.title },
+                slug: node.slug,
+                _embedded: {
+                    'wp:featuredmedia': node.featuredImage ? [{
+                        source_url: node.featuredImage.node.sourceUrl,
+                        alt_text: node.featuredImage.node.altText
+                    }] : []
+                }
+            }));
+            totalPages = Math.ceil(cat.logos.pageInfo.offsetPagination.total / perPage);
         }
     } catch (error) {
-        console.error('Error fetching category logos:', error);
+        console.warn('GraphQL failed for LogoCategory, falling back to REST:', error);
+        try {
+            const categories = await fetchREST(`logo_category?slug=${slug}&_fields=id,name,description`);
+            if (categories.length > 0) {
+                const catId = categories[0].id;
+                categoryName = categories[0].name;
+                categoryDescription = categories[0].description || '';
+                const res = await fetchRESTWithMeta(`logo?logo_category=${catId}&per_page=${perPage}&page=${page}&_embed&_fields=id,title,slug,_links,_embedded`);
+                logos = res.data;
+                totalPages = res.totalPages;
+            }
+        } catch (e) {
+            console.error('Final REST fallback failed:', e);
+        }
     }
 
     return (
