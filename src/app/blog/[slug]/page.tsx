@@ -1,5 +1,4 @@
-export const dynamic = 'force-dynamic';
-export const revalidate = 3600;
+export const revalidate = 86400; // 24 hours
 import { fetchREST } from '@/lib/rest';
 import { stripScripts } from '@/lib/sanitize';
 import { Calendar, User, ArrowLeft, Share2, Clock } from 'lucide-react';

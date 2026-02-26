@@ -12,10 +12,10 @@
  *   everything else    → Next.js (Cloudflare Pages)
  *
  * Setup in Cloudflare Dashboard:
- *   1. Go to Workers & Pages → Create → Worker
+ *   1. Go to Workers & Pages → Create → Worker (this acts as your "Front Door")
  *   2. Paste this script
- *   3. Set environment variable: PAGES_URL = https://bootflare.pages.dev
- *      (or whatever your Cloudflare Pages deployment URL is)
+ *   3. Set environment variable: ORIGIN_URL = https://bootflare.crimson-mud-7db5.workers.dev
+ *      (This is the URL of your Next.js app deployed via OpenNext)
  *   4. Add Worker Route: bootflare.com/* → this worker
  */
 
@@ -61,11 +61,28 @@ export default {
             });
         }
 
-        // ── Next.js: forward to Cloudflare Pages ──────────────────────────
-        // PAGES_URL is set in the Worker's environment variables,
-        // e.g. https://bootflare.pages.dev
-        const pagesBase = env.PAGES_URL;
-        const targetUrl = new URL(pathname + url.search, pagesBase);
+        // ── Next.js: forward to Origin Worker ──────────────────────────
+        // ORIGIN_URL is set in the Worker's environment variables,
+        // e.g. https://bootflare.crimson-mud-7db5.workers.dev
+        const originBase = env.ORIGIN_URL;
+        const targetUrl = new URL(pathname + url.search, originBase);
+
+        // --- Cache Logic ---
+        const cache = caches.default;
+        // Only cache GET and HEAD requests
+        const isCacheableMethod = ['GET', 'HEAD'].includes(request.method);
+        // Don't cache if there's a specific bypassed-cache header or search param if needed
+        const useCache = isCacheableMethod && !url.searchParams.has('nocache');
+
+        if (useCache) {
+            const cachedResponse = await cache.match(request);
+            if (cachedResponse) {
+                // Return cached response but add a header to indicate it's from the worker cache
+                const response = new Response(cachedResponse.body, cachedResponse);
+                response.headers.set('X-Worker-Cache', 'HIT');
+                return response;
+            }
+        }
 
         const newRequest = new Request(targetUrl.toString(), {
             method: request.method,
@@ -82,6 +99,24 @@ export default {
             redirect: 'manual',
         });
 
-        return fetch(newRequest);
+        let response = await fetch(newRequest);
+
+        // Store in cache if status is OK and it's a cacheable method
+        if (useCache && response.ok) {
+            // We need to clone the response to put it in cache and return it
+            const responseToCache = new Response(response.body, response);
+            // Ensure Cache-Control is set so it actually stays in cache
+            // s-maxage=3600 (1 hour) on the edge, max-age=60 (1 min) in browser
+            responseToCache.headers.set('Cache-Control', 'public, s-maxage=3600, max-age=60');
+
+            // event.waitUntil ensures the worker doesn't terminate before the cache is updated
+            ctx.waitUntil(cache.put(request, responseToCache.clone()));
+
+            // Re-create the response to return (since the body might be locked/consumed)
+            response = new Response(responseToCache.body, responseToCache);
+            response.headers.set('X-Worker-Cache', 'MISS');
+        }
+
+        return response;
     },
 };

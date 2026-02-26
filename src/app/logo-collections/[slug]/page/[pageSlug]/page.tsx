@@ -1,5 +1,4 @@
-export const dynamic = 'force-dynamic';
-export const revalidate = 3600;
+export const revalidate = 3600; // 1 hour
 import { fetchREST, fetchRESTWithMeta } from '@/lib/rest';
 import Link from 'next/link';
 import LogoCard from '@/components/LogoCard';
