@@ -1,10 +1,54 @@
 export const revalidate = 3600; // 1 hour
-import { fetchREST } from '@/lib/rest';
+import { fetchGraphQL } from '@/lib/graphql';
 import Link from 'next/link';
 import { stripScripts } from '@/lib/sanitize';
-import { Calendar, ChevronRight, Hash } from 'lucide-react';
+import { Calendar, ChevronRight, AlertTriangle } from 'lucide-react';
 import { fetchRankMathSEO, mapRankMathToMetadata } from '@/lib/seo';
 import { Metadata } from 'next';
+
+const GET_BLOG_POSTS = `
+  query GetBlogPosts {
+    posts(first: 8) {
+      nodes {
+        id
+        title
+        slug
+        excerpt
+        date
+        featuredImage {
+          node {
+            sourceUrl
+          }
+        }
+        categories {
+          nodes {
+            name
+            slug
+          }
+        }
+      }
+    }
+  }
+`;
+
+interface GQLPost {
+  id: string;
+  title: string;
+  slug: string;
+  excerpt: string;
+  date: string;
+  featuredImage?: {
+    node: {
+      sourceUrl: string;
+    };
+  };
+  categories?: {
+    nodes: {
+      name: string;
+      slug: string;
+    }[];
+  };
+}
 
 export async function generateMetadata(): Promise<Metadata> {
   const seo = await fetchRankMathSEO('https://bootflare.com/blog/');
@@ -12,41 +56,36 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: 'Blog | Bootflare' };
 }
 
-interface WPPost {
-  id: number;
-  title: { rendered: string };
-  slug: string;
-  excerpt: { rendered: string };
-  date: string;
-  _embedded?: {
-    'wp:featuredmedia'?: { source_url: string }[];
-    'wp:term'?: { taxonomy: string; name: string; slug: string }[][];
-  };
-}
-
 export default async function BlogPage() {
-  let posts: WPPost[] = [];
+  let posts: GQLPost[] = [];
+  let errorOccurred = false;
+
   try {
-    const res = await fetchREST('posts?_embed&per_page=8&_fields=id,title,slug,excerpt,date,_links,_embedded');
-    if (Array.isArray(res)) {
-      posts = Array.from(new Map(res.map((item: any) => [item.id, item])).values()) as WPPost[];
-    }
+    const data: { posts: { nodes: GQLPost[] } } = await fetchGraphQL(GET_BLOG_POSTS);
+    posts = data.posts.nodes;
   } catch (error) {
     console.error('Error fetching posts:', error);
+    errorOccurred = true;
   }
 
-  const extractCategories = (post: WPPost) => {
-    const terms = post._embedded?.['wp:term'] || [];
-    const categories: { name: string, slug: string }[] = [];
-    for (const taxonomyList of terms) {
-      for (const term of taxonomyList) {
-        if (term.taxonomy === 'category') {
-          categories.push({ name: term.name, slug: term.slug });
-        }
-      }
-    }
-    return categories;
-  };
+  if (errorOccurred) {
+    return (
+      <div className="bg-slate-50 min-h-screen pt-32 pb-20">
+        <div className="container text-center py-32 bg-white rounded-[3rem] border border-dashed border-red-200">
+          <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
+            <AlertTriangle className="w-8 h-8" />
+          </div>
+          <h2 className="text-2xl font-bold text-slate-800 mb-4">WordPress is taking too long</h2>
+          <p className="text-slate-500 text-lg font-light mb-8 max-w-md mx-auto">
+            We couldn't reach the WordPress server in time. Please try refreshing the page in a few moments.
+          </p>
+          <Link href="/" prefetch={true} className="btn-premium">
+            Back to Home
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-slate-50 min-h-screen pt-32 pb-20">
@@ -62,8 +101,8 @@ export default async function BlogPage() {
         {/* Featured Post (Optional, taking first) */}
         {posts.length > 0 && (() => {
           const firstPost = posts[0];
-          const featuredImage = firstPost._embedded?.['wp:featuredmedia']?.[0]?.source_url;
-          const categories = extractCategories(firstPost);
+          const featuredImage = firstPost.featuredImage?.node?.sourceUrl;
+          const categories = firstPost.categories?.nodes || [];
 
           return (
             <div className="mb-16">
@@ -72,7 +111,7 @@ export default async function BlogPage() {
                   <Link href={`/blog/${firstPost.slug}`} prefetch={true} className="block relative aspect-video rounded-[2rem] overflow-hidden group">
                     <img
                       src={featuredImage}
-                      alt={firstPost.title.rendered}
+                      alt={firstPost.title}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                     />
                   </Link>
@@ -88,12 +127,12 @@ export default async function BlogPage() {
                   <Link href={`/blog/${firstPost.slug}`} prefetch={true}>
                     <h2
                       className="text-3xl md:text-4xl font-bold mb-6 hover:text-primary transition-colors text-slate-900"
-                      dangerouslySetInnerHTML={{ __html: firstPost.title.rendered }}
+                      dangerouslySetInnerHTML={{ __html: firstPost.title }}
                     />
                   </Link>
                   <div
                     className="text-slate-500 text-lg line-clamp-3 mb-8 font-light [&_p]:mb-0"
-                    dangerouslySetInnerHTML={{ __html: stripScripts(firstPost.excerpt.rendered) }}
+                    dangerouslySetInnerHTML={{ __html: stripScripts(firstPost.excerpt) }}
                   />
                   <Link href={`/blog/${firstPost.slug}`} prefetch={true} className="btn-premium group !px-10">
                     Read Article <ChevronRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
@@ -107,8 +146,8 @@ export default async function BlogPage() {
         {/* Grid Section */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
           {posts.slice(1).map((post) => {
-            const featuredImage = post._embedded?.['wp:featuredmedia']?.[0]?.source_url;
-            const categories = extractCategories(post);
+            const featuredImage = post.featuredImage?.node?.sourceUrl;
+            const categories = post.categories?.nodes || [];
 
             return (
               <article key={post.id} className="card-premium !p-0 flex flex-col group h-full">
@@ -116,7 +155,7 @@ export default async function BlogPage() {
                   <Link href={`/blog/${post.slug}`} prefetch={true} className="relative h-64 overflow-hidden rounded-t-[2rem]">
                     <img
                       src={featuredImage}
-                      alt={post.title.rendered}
+                      alt={post.title}
                       className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
@@ -141,13 +180,13 @@ export default async function BlogPage() {
                   <Link href={`/blog/${post.slug}`} prefetch={true} className="mb-4">
                     <h3
                       className="text-xl font-bold text-slate-900 hover:text-primary transition-colors line-clamp-2 leading-tight"
-                      dangerouslySetInnerHTML={{ __html: post.title.rendered }}
+                      dangerouslySetInnerHTML={{ __html: post.title }}
                     />
                   </Link>
 
                   <div
                     className="text-slate-500 text-sm line-clamp-2 mb-8 font-light flex-1 [&_p]:mb-0"
-                    dangerouslySetInnerHTML={{ __html: stripScripts(post.excerpt.rendered) }}
+                    dangerouslySetInnerHTML={{ __html: stripScripts(post.excerpt) }}
                   />
 
                   <Link href={`/blog/${post.slug}`} prefetch={true} className="flex items-center gap-2 text-primary font-bold text-sm group-link">
@@ -168,4 +207,5 @@ export default async function BlogPage() {
     </div>
   );
 }
+
 

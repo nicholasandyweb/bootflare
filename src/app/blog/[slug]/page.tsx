@@ -1,32 +1,71 @@
 export const revalidate = 86400; // 24 hours
-import { fetchREST } from '@/lib/rest';
+import { fetchGraphQL } from '@/lib/graphql';
 import { stripScripts } from '@/lib/sanitize';
-import { Calendar, User, ArrowLeft, Share2, Clock } from 'lucide-react';
+import { Calendar, User, ArrowLeft, Share2, Clock, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 import { Metadata } from 'next';
 import { fetchRankMathSEO, mapRankMathToMetadata, mapWPToMetadata } from '@/lib/seo';
-
 import { cache } from 'react';
 
 export const dynamicParams = true;
 
-interface WPPost {
-  id: number;
-  title: { rendered: string };
-  content: { rendered: string };
-  excerpt: { rendered: string };
+const GET_POST_BY_SLUG = `
+  query GetPostBySlug($slug: ID!) {
+    post(id: $slug, idType: SLUG) {
+      id
+      title
+      content
+      excerpt
+      slug
+      date
+      featuredImage {
+        node {
+          sourceUrl
+        }
+      }
+      author {
+        node {
+          name
+        }
+      }
+      categories {
+        nodes {
+          name
+          slug
+        }
+      }
+    }
+  }
+`;
+
+interface GQLPost {
+  id: string;
+  title: string;
+  content: string;
+  excerpt: string;
   slug: string;
   date: string;
-  _embedded?: {
-    'wp:featuredmedia'?: { source_url: string }[];
-    'wp:term'?: { taxonomy: string; name: string; slug: string }[][];
-    author?: { name: string }[];
+  featuredImage?: {
+    node: {
+      sourceUrl: string;
+    };
+  };
+  author?: {
+    node: {
+      name: string;
+    };
+  };
+  categories?: {
+    nodes: {
+      name: string;
+      slug: string;
+    }[];
   };
 }
 
 const getPostBySlug = cache(async (slug: string) => {
-  const posts: WPPost[] = await fetchREST(`posts?slug=${slug}&_embed&_fields=id,title,content,excerpt,slug,date,_links,_embedded`);
-  return posts.length > 0 ? posts[0] : null;
+  const data: { post: GQLPost | null } = await fetchGraphQL(GET_POST_BY_SLUG, { slug });
+  return data.post;
 });
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
@@ -39,7 +78,13 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       if (seo) return mapRankMathToMetadata(seo);
 
       // Fallback
-      return mapWPToMetadata(post, 'Blog | Bootflare');
+      return mapWPToMetadata({
+        title: { rendered: post.title },
+        excerpt: { rendered: post.excerpt },
+        _embedded: {
+          'wp:featuredmedia': post.featuredImage ? [{ source_url: post.featuredImage.node.sourceUrl }] : []
+        }
+      } as any, 'Blog | Bootflare');
     }
   } catch (error) {
     console.error('Error generating metadata for blog post:', error);
@@ -49,33 +94,52 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
 export default async function BlogPost({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  let post: WPPost | null = null;
+  let post: GQLPost | null = null;
+  let errorOccurred = false;
 
   try {
     post = await getPostBySlug(slug);
   } catch (error) {
     console.error('Error fetching post:', error);
+    errorOccurred = true;
+  }
+
+  if (errorOccurred) {
+    return (
+      <div className="bg-slate-50 min-h-screen pt-32 pb-20">
+        <div className="container text-center py-32 bg-white rounded-[3rem] border border-dashed border-red-200">
+          <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
+            <AlertTriangle className="w-8 h-8" />
+          </div>
+          <h2 className="text-2xl font-bold text-slate-800 mb-4">WordPress is taking too long</h2>
+          <p className="text-slate-500 text-lg font-light mb-8 max-w-md mx-auto">
+            We couldn't reach the WordPress server in time. Please try refreshing the page in a few moments.
+          </p>
+          <Link href="/blog" prefetch={true} className="btn-premium">
+            Back to Insights
+          </Link>
+        </div>
+      </div>
+    );
   }
 
   if (!post) {
-    return <div className="container py-32 text-center text-slate-500">Post not found</div>;
+    return (
+      <div className="bg-slate-50 min-h-screen pt-32 pb-20">
+        <div className="container text-center py-32 bg-white rounded-[3rem] border border-dashed border-slate-200">
+          <p className="text-slate-400 text-xl font-light">Post not found.</p>
+          <Link href="/blog" prefetch={true} className="text-primary font-bold mt-4 inline-block hover:underline">
+            Back to Insights
+          </Link>
+        </div>
+      </div>
+    );
   }
 
-  const sanitizedContent = stripScripts(post.content.rendered);
-
-  // Extract categories safely from WP REST _embedded terms
-  const terms = post._embedded?.['wp:term'] || [];
-  const categories: { name: string, slug: string }[] = [];
-  for (const taxonomyList of terms) {
-    for (const term of taxonomyList) {
-      if (term.taxonomy === 'category') {
-        categories.push({ name: term.name, slug: term.slug });
-      }
-    }
-  }
-
-  const authorName = post._embedded?.author?.[0]?.name || "Bootflare Editorial";
-  const featuredImage = post._embedded?.['wp:featuredmedia']?.[0]?.source_url;
+  const sanitizedContent = stripScripts(post.content);
+  const categories = post.categories?.nodes || [];
+  const authorName = post.author?.node?.name || "Bootflare Editorial";
+  const featuredImage = post.featuredImage?.node?.sourceUrl;
 
   return (
     <article className="bg-white min-h-screen pb-20" suppressHydrationWarning>
@@ -104,12 +168,12 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
 
           <h1
             className="text-4xl md:text-6xl font-bold mb-12 leading-tight text-slate-900 font-ubuntu"
-            dangerouslySetInnerHTML={{ __html: post.title.rendered }}
+            dangerouslySetInnerHTML={{ __html: post.title }}
           />
 
           {featuredImage && (
             <div className="mb-20 rounded-[3rem] overflow-hidden shadow-2xl shadow-slate-200 border-8 border-white ring-1 ring-slate-100">
-              <img src={featuredImage} alt={post.title.rendered} className="w-full h-auto" />
+              <img src={featuredImage} alt={post.title} className="w-full h-auto" />
             </div>
           )}
 
@@ -163,3 +227,4 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
     </article>
   );
 }
+
