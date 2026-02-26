@@ -1,6 +1,6 @@
 import { Metadata } from 'next';
 
-const WP_URL = 'https://bootflare.com';
+const WP_URL = 'https://origin-wp.bootflare.com';
 
 interface WPPost {
     title?: { rendered: string } | string;

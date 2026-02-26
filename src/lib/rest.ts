@@ -1,9 +1,9 @@
-const WP_URL = 'https://bootflare.com';
+const WP_URL = process.env.NEXT_PUBLIC_WORDPRESS_URL || 'https://origin-wp.bootflare.com';
 
 // Development-only in-memory cache to prevent "minutes of loading" during local testing
 const devCache = new Map<string, { data: any; timestamp: number }>();
 const CACHE_TTL = 10 * 60 * 1000; // 10 minutes
-const FETCH_TIMEOUT = 250000; // Increased to 250s for slower WP origins
+const FETCH_TIMEOUT = 15000; // Reduced to 15s to prevent long hangs
 
 export async function fetchREST(endpoint: string, retries = 2, namespace = 'wp/v2') {
     const separator = endpoint.includes('?') ? '&' : '?';

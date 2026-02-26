@@ -1,6 +1,6 @@
 import { GraphQLClient } from 'graphql-request';
 
-const WP_GRAPHQL_URL = 'https://bootflare.com/graphql';
+const WP_GRAPHQL_URL = 'https://origin-wp.bootflare.com/graphql';
 const endpoint = process.env.WORDPRESS_GRAPHQL_ENDPOINT || WP_GRAPHQL_URL;
 
 export const client = new GraphQLClient(endpoint, {
@@ -13,7 +13,7 @@ export const client = new GraphQLClient(endpoint, {
 export async function fetchGraphQL<T>(query: string, variables?: Record<string, unknown>, retries = 2): Promise<T> {
   for (let i = 0; i < retries; i++) {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 250000); // 250s timeout
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
 
     try {
       const res = await fetch(endpoint, {
