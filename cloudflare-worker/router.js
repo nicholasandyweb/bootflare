@@ -47,23 +47,67 @@ export default {
 
         if (isWordPressPath) {
             // ── WordPress: pass through to shared hosting origin ──
-            // Use resolveOverride with the grey-clouded hostname.
-            // This is the stable way to bypass the worker routing while keeping SNI valid.
             const wpHeaders = new Headers(request.headers);
             wpHeaders.set('Host', 'bootflare.com');
             wpHeaders.set('X-Forwarded-Host', 'bootflare.com');
             wpHeaders.set('X-Forwarded-Proto', 'https');
             wpHeaders.set('X-Forwarded-For', request.headers.get('CF-Connecting-IP') || '');
 
-            return fetch(request.url, {
+            // --- API Caching (GraphQL & REST) ---
+            const isApi = pathname === '/graphql' || pathname.startsWith('/wp-json');
+            const cache = caches.default;
+            let cacheKey = request;
+
+            if (isApi && ['GET', 'POST'].includes(request.method)) {
+                try {
+                    if (request.method === 'POST') {
+                        // For POST (GraphQL), we must hash the body to create a unique cache key
+                        const body = await request.clone().text();
+                        const hashBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(body));
+                        const hashArray = Array.from(new Uint8Array(hashBuffer));
+                        const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+                        const cacheUrl = new URL(request.url);
+                        cacheUrl.searchParams.set('__gql_hash', hashHex);
+                        cacheKey = new Request(cacheUrl.toString(), {
+                            method: 'GET', // Use GET for the cache key
+                            headers: request.headers
+                        });
+                    }
+
+                    const cachedResponse = await cache.match(cacheKey);
+                    if (cachedResponse) {
+                        const response = new Response(cachedResponse.body, cachedResponse);
+                        response.headers.set('X-API-Cache', 'HIT');
+                        return response;
+                    }
+                } catch (e) {
+                    console.error('API Cache Error:', e);
+                }
+            }
+
+            const response = await fetch(request.url, {
                 method: request.method,
                 headers: wpHeaders,
                 body: ['GET', 'HEAD'].includes(request.method) ? null : request.body,
-                redirect: 'manual', // CRITICAL: Handle redirects in the browser to break the 524 loop.
+                redirect: 'manual',
                 cf: {
                     resolveOverride: 'origin-wp.bootflare.com'
                 }
             });
+
+            // Cache successful API responses
+            if (isApi && response.ok && ['GET', 'POST'].includes(request.method)) {
+                const responseToCache = new Response(response.clone().body, response);
+                responseToCache.headers.set('Cache-Control', 'public, s-maxage=3600');
+                ctx.waitUntil(cache.put(cacheKey, responseToCache));
+
+                const newResponse = new Response(response.body, response);
+                newResponse.headers.set('X-API-Cache', 'MISS');
+                return newResponse;
+            }
+
+            return response;
         }
 
         // ── Next.js: forward to Origin Worker ──────────────────────────
