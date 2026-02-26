@@ -63,8 +63,13 @@ export async function fetchREST(endpoint: string, retries = 2, namespace = 'wp/v
             }
 
             if (start === -1) {
+                // Detect Imunify360 or Cloudflare bot challenges which return HTML
+                if (text.includes('Imunify360') || text.toLowerCase().includes('bot-protection') || text.includes('Challenge Validation')) {
+                    console.warn(`Bot protection detected at ${url}, returning null to allow graceful fallback.`);
+                    return null;
+                }
                 console.error(`No JSON found in response from ${url}`);
-                if (i === retries - 1) throw new Error(`Fetch failed: ${url} - ${res.statusText}`);
+                if (i === retries - 1) return null; // Graceful fallback instead of throw
                 continue;
             }
 
@@ -112,7 +117,8 @@ export async function fetchREST(endpoint: string, retries = 2, namespace = 'wp/v
             await new Promise(resolve => setTimeout(resolve, waitTime));
         }
     }
-    throw new Error(`Failed to fetch from REST API after ${retries} attempts (${url})`);
+    console.warn(`Failed to fetch from REST API after ${retries} attempts (${url}), returning null for fallback.`);
+    return null;
 }
 
 export async function fetchRESTWithMeta(endpoint: string, retries = 2, namespace = 'wp/v2') {
@@ -178,8 +184,13 @@ export async function fetchRESTWithMeta(endpoint: string, retries = 2, namespace
             }
 
             if (start === -1) {
+                // Detect Imunify360 or Cloudflare bot challenges which return HTML
+                if (text.includes('Imunify360') || text.toLowerCase().includes('bot-protection') || text.includes('Challenge Validation')) {
+                    console.warn(`Bot protection detected at ${url}, returning null to allow graceful fallback.`);
+                    return null;
+                }
                 console.error(`No JSON found in response from ${url}`);
-                if (i === retries - 1) throw new Error(`Fetch failed: missing JSON boundaries in response from ${url}`);
+                if (i === retries - 1) return null; // Graceful fallback instead of throw
                 continue;
             }
 
@@ -228,5 +239,6 @@ export async function fetchRESTWithMeta(endpoint: string, retries = 2, namespace
             await new Promise(resolve => setTimeout(resolve, waitTime));
         }
     }
-    throw new Error(`Failed to fetch from REST API after ${retries} attempts (${url})`);
+    console.warn(`Failed to fetch from REST API after ${retries} attempts (${url}), returning null for fallback.`);
+    return null;
 }

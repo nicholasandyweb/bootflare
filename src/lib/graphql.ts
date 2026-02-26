@@ -50,20 +50,31 @@ export async function fetchGraphQL<T>(query: string, variables?: Record<string, 
       try {
         json = JSON.parse(text);
       } catch (e) {
-        console.error(`Status: ${res.status} ${res.statusText}`);
-        console.error(`Invalid JSON response (first 100 chars): ${text.substring(0, 100)}`);
-        if (i === retries - 1) throw new Error('Failed to parse GraphQL response as JSON');
+        console.warn(`Status: ${res.status} ${res.statusText}`);
+        console.warn(`Invalid JSON response (first 100 chars): ${text.substring(0, 100)}`);
+
+        // Detect Imunify360 or Cloudflare bot challenges which return HTML
+        if (text.includes('Imunify360') || text.toLowerCase().includes('bot-protection') || text.includes('Challenge Validation')) {
+          console.warn('Bot protection detected, returning null to allow graceful fallback.');
+          return null as any as T;
+        }
+
+        if (i === retries - 1) return null as any as T;
         continue;
       }
 
       if (json.errors) {
-        console.error('GraphQL Errors:', JSON.stringify(json.errors, null, 2));
-        throw new Error('Failed to fetch API due to GraphQL Errors');
+        console.warn('GraphQL Errors:', JSON.stringify(json.errors, null, 2));
+        return null as any as T;
       }
-
       if (!json.data) {
-        console.error('GraphQL Response missing "data" field:', JSON.stringify(json, null, 2));
-        throw new Error('GraphQL Response missing "data" field');
+        // Handle cases where Imunify returns JSON with a message instead of actual GraphQL data
+        if (json.message && json.message.includes('Imunify360')) {
+          console.warn('Imunify360 bot-protection JSON detected, returning null.');
+          return null as any as T;
+        }
+        console.warn('GraphQL Response missing "data" field:', JSON.stringify(json, null, 2));
+        return null as any as T;
       }
 
       return json.data;
@@ -79,5 +90,7 @@ export async function fetchGraphQL<T>(query: string, variables?: Record<string, 
       await new Promise(resolve => setTimeout(resolve, waitTime));
     }
   }
-  throw new Error('Failed to fetch GraphQL API after max retries');
+
+  console.warn('Failed to fetch GraphQL API after max retries, returning null for fallback.');
+  return null as any as T;
 }
