@@ -71,11 +71,32 @@ export default {
         const cache = caches.default;
         // Only cache GET and HEAD requests
         const isCacheableMethod = ['GET', 'HEAD'].includes(request.method);
-        // Don't cache if there's a specific bypassed-cache header or search param if needed
+
+        // Normalize Request for better cache hits (RSC vs Prefetch)
+        const isRSC = request.headers.has('RSC') || request.headers.has('Next-Router-Prefetch') || request.headers.has('Next-Router-State-Tree');
+
+        // Create a stable cache key
+        let cacheUrl = new URL(request.url);
+        // If it's a data request, append a suffix to the path in the cache key
+        // to keep it separate from the HTML version but shared between prefetch/nav.
+        if (isRSC) {
+            cacheUrl.pathname += '/__data.json';
+        }
+        const cacheKey = new Request(cacheUrl.toString(), {
+            method: request.method,
+            // We strip the intent-specific headers for the cache key so prefetch hits nav
+            headers: (() => {
+                const h = new Headers(request.headers);
+                h.delete('Next-Router-Prefetch');
+                h.delete('Purpose');
+                return h;
+            })()
+        });
+
         const useCache = isCacheableMethod && !url.searchParams.has('nocache');
 
         if (useCache) {
-            const cachedResponse = await cache.match(request);
+            const cachedResponse = await cache.match(cacheKey);
             if (cachedResponse) {
                 // Return cached response but add a header to indicate it's from the worker cache
                 const response = new Response(cachedResponse.body, cachedResponse);
@@ -106,11 +127,19 @@ export default {
             // We need to clone the response to put it in cache and return it
             const responseToCache = new Response(response.body, response);
             // Ensure Cache-Control is set so it actually stays in cache
-            // s-maxage=3600 (1 hour) on the edge, max-age=60 (1 min) in browser
-            responseToCache.headers.set('Cache-Control', 'public, s-maxage=3600, max-age=60');
+            // s-maxage=3600 (1 hour) on the edge, max-age=3600 (1 hour) in browser
+            responseToCache.headers.set('Cache-Control', 'public, s-maxage=3600, max-age=3600');
+            // Strip Vary header if it contains RSC/Prefetch to ensure our normalized key works
+            const vary = responseToCache.headers.get('Vary') || '';
+            if (vary.toLowerCase().includes('rsc') || vary.toLowerCase().includes('prefetch')) {
+                // We trust our cacheKey normalization, so we can relax the Vary header
+                responseToCache.headers.set('Vary', vary.split(',').map(s => s.trim()).filter(s =>
+                    !['rsc', 'next-router-prefetch', 'next-router-state-tree', 'purpose'].includes(s.toLowerCase())
+                ).join(', '));
+            }
 
             // event.waitUntil ensures the worker doesn't terminate before the cache is updated
-            ctx.waitUntil(cache.put(request, responseToCache.clone()));
+            ctx.waitUntil(cache.put(cacheKey, responseToCache.clone()));
 
             // Re-create the response to return (since the body might be locked/consumed)
             response = new Response(responseToCache.body, responseToCache);
