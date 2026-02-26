@@ -81,13 +81,13 @@ export default async function LogoCollectionsArchive() {
         }
     }
 
-    const description = seoData?.description
-        ? decodeEntities(seoData.description)
-        : taxonomyMeta?.description
-            ? decodeEntities(taxonomyMeta.description)
+    const description = taxonomyMeta?.description
+        ? decodeEntities(taxonomyMeta.description)
+        : seoData?.description
+            ? decodeEntities(seoData.description)
             : 'Explore our curated groups of brand identities. Find industry-specific collections tailored for your creative needs.';
 
-    const pageTitle = taxonomyMeta?.name || 'Logo Collections';
+    const pageTitle = 'Logo Collections';
 
     // Ensure we only show collections that actually contain logos and are unique by name/ID
     const uniqueCollections = Array.from(new Map(collections.map(col => [col.id, col])).values());

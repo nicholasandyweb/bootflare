@@ -88,13 +88,13 @@ export default async function LogoCategoriesArchive() {
 
     // The description logic is updated to remove reliance on wpData,
     // which was previously populated by GraphQL.
-    const description = seoData?.description
-        ? decodeEntities(seoData.description)
-        : taxonomyMeta?.description
-            ? decodeEntities(taxonomyMeta.description)
+    const description = taxonomyMeta?.description
+        ? decodeEntities(taxonomyMeta.description)
+        : seoData?.description
+            ? decodeEntities(seoData.description)
             : 'Explore our comprehensive directory of brand categories. Find the perfect logo for any industry or style.';
 
-    const pageTitle = taxonomyMeta?.name || 'Logo Categories';
+    const pageTitle = 'Logo Categories';
 
     // Ensure we only show categories that actually contain logos and are unique by name/ID
     const uniqueCategories = Array.from(new Map(categories.map(cat => [cat.id, cat])).values());
