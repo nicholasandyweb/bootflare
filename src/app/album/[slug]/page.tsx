@@ -70,8 +70,8 @@ export default async function SingleMusic({ params, searchParams }: { params: Pr
     let allTracks: Track[] = [];
 
     try {
-        const data = await fetchGraphQL<{ playlist: AlbumNode }>(GET_ALBUM_BY_SLUG, { slug });
-        if (data.playlist) {
+        const data: { playlist?: AlbumNode } | null = await fetchGraphQL(GET_ALBUM_BY_SLUG, { slug });
+        if (data && data.playlist) {
             const p = data.playlist;
             album = {
                 id: p.databaseId,

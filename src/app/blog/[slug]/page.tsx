@@ -64,8 +64,8 @@ interface GQLPost {
 }
 
 const getPostBySlug = cache(async (slug: string) => {
-  const data: { post: GQLPost | null } = await fetchGraphQL(GET_POST_BY_SLUG, { slug });
-  return data.post;
+  const data: { post?: GQLPost | null } | null = await fetchGraphQL(GET_POST_BY_SLUG, { slug });
+  return data?.post || null;
 });
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {

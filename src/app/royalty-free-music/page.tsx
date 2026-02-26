@@ -79,8 +79,8 @@ export default async function RoyaltyFreeMusicArchive() {
       fetchRankMathSEO('https://bootflare.com/royalty-free-music/')
     ]);
 
-    albums = restResult.data;
-    totalPages = restResult.totalPages;
+    albums = restResult?.data || [];
+    totalPages = restResult?.totalPages || 1;
     seoData = seo;
 
     // Optional: Fetch page title/excerpt via GraphQL if needed

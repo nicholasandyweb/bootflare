@@ -64,8 +64,11 @@ interface LogoNode {
 
 const getLogoBySlug = cache(async (slug: string) => {
     try {
-        const data = await fetchGraphQL<{ logo: LogoNode }>(GET_LOGO_BY_SLUG, { slug });
-        return data.logo;
+        const data: { logo?: LogoNode } | null = await fetchGraphQL(GET_LOGO_BY_SLUG, { slug });
+        if (data && data.logo) {
+            return data.logo;
+        }
+        throw new Error("GraphQL returned empty data.");
     } catch (e) {
         console.error('Error fetching logo via GraphQL:', e);
         // Fallback to REST only if GraphQL fails

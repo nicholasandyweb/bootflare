@@ -4,8 +4,12 @@ import { fetchRankMathSEO, mapRankMathToMetadata } from '@/lib/seo';
 import { Metadata } from 'next';
 
 export async function generateMetadata(): Promise<Metadata> {
-  const seo = await fetchRankMathSEO('https://bootflare.com/');
-  if (seo) return mapRankMathToMetadata(seo);
+  try {
+    const seo = await fetchRankMathSEO('https://bootflare.com/');
+    if (seo) return mapRankMathToMetadata(seo);
+  } catch (e) {
+    console.error('Metadata fetch failed for page:', e);
+  }
   return {};
 }
 
@@ -47,13 +51,19 @@ export default async function Home() {
   try {
     const data = await fetchGraphQL<HomeData>(GET_HOME_DATA);
 
-    logoImages = data.logos.nodes
-      .map(node => node.featuredImage?.node?.sourceUrl)
-      .filter((url): url is string => !!url);
+    if (data) {
+      if (data.logos?.nodes) {
+        logoImages = data.logos.nodes
+          .map(node => node.featuredImage?.node?.sourceUrl)
+          .filter((url): url is string => !!url);
+      }
 
-    musicImages = data.music.nodes
-      .map(node => node.featuredImage?.node?.sourceUrl)
-      .filter((url): url is string => !!url);
+      if (data.music?.nodes) {
+        musicImages = data.music.nodes
+          .map(node => node.featuredImage?.node?.sourceUrl)
+          .filter((url): url is string => !!url);
+      }
+    }
   } catch (error) {
     console.error('Error fetching homepage data:', error);
   }

@@ -61,9 +61,9 @@ export default async function LogoCollectionPaginated({ params }: { params: Prom
 
     try {
         const offset = (page - 1) * perPage;
-        const data = await fetchGraphQL<CollectionData>(GET_COLLECTION_DATA, { slug, offset, size: perPage });
+        const data: { logoCollection?: CollectionData['logoCollection'] } | null = await fetchGraphQL(GET_COLLECTION_DATA, { slug, offset, size: perPage });
 
-        if (data.logoCollection) {
+        if (data && data.logoCollection) {
             const col = data.logoCollection;
             collectionName = col.name;
             collectionDescription = col.description || '';

@@ -70,8 +70,8 @@ interface GQLPost {
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
     const { slug } = await params;
     try {
-        const data: { category: GQLCategory | null } = await fetchGraphQL(GET_CATEGORY_POSTS, { slug });
-        if (data.category) {
+        const data: { category?: GQLCategory | null } | null = await fetchGraphQL(GET_CATEGORY_POSTS, { slug });
+        if (data && data.category) {
             return {
                 title: `${decodeEntities(data.category.name)} | Blog Category | Bootflare`,
                 description: data.category.description || `Browse all articles in the ${decodeEntities(data.category.name)} category.`
@@ -89,8 +89,10 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
     let errorOccurred = false;
 
     try {
-        const data: { category: GQLCategory | null } = await fetchGraphQL(GET_CATEGORY_POSTS, { slug });
-        category = data.category;
+        const data: { category?: GQLCategory | null } | null = await fetchGraphQL(GET_CATEGORY_POSTS, { slug });
+        if (data && data.category) {
+            category = data.category;
+        }
     } catch (error) {
         console.error('Error fetching category posts:', error);
         errorOccurred = true;
