@@ -40,9 +40,8 @@ interface WPData {
   page: { title: string; excerpt?: string };
 }
 
-export default async function RoyaltyFreeMusicArchive({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
-  const sp = await searchParams;
-  const page = parseInt(sp.page || '1', 10);
+export default async function RoyaltyFreeMusicArchive() {
+  const page = 1;
 
   let albums: Album[] = [];
   let wpData: WPData | null = null;
@@ -143,6 +142,7 @@ export default async function RoyaltyFreeMusicArchive({ searchParams }: { search
                 currentPage={page}
                 totalPages={totalPages}
                 baseUrl="/royalty-free-music"
+                usePathBased={true}
               />
             </div>
           )}
