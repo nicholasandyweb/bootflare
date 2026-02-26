@@ -1,4 +1,4 @@
-export const dynamic = 'force-dynamic';
+export const revalidate = 3600; // 1 hour
 import LogosTemplate from '@/components/LogosTemplate';
 import { Metadata } from 'next';
 import { fetchRankMathSEO, mapRankMathToMetadata } from '@/lib/seo';
