@@ -81,10 +81,10 @@ export default async function LogoCollectionsArchive() {
         }
     }
 
-    const description = taxonomyMeta?.description
-        ? decodeEntities(taxonomyMeta.description)
-        : seoData?.description
-            ? decodeEntities(seoData.description)
+    const description = seoData?.description
+        ? decodeEntities(seoData.description)
+        : taxonomyMeta?.description
+            ? decodeEntities(taxonomyMeta.description)
             : 'Explore our curated groups of brand identities. Find industry-specific collections tailored for your creative needs.';
 
     const pageTitle = taxonomyMeta?.name || 'Logo Collections';

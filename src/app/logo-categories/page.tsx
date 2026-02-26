@@ -10,7 +10,7 @@ import LogoSearch from '@/components/LogoSearch';
 import { fetchGraphQL } from '@/lib/graphql';
 
 export async function generateMetadata(): Promise<Metadata> {
-    const seo = await fetchRankMathSEO('https://bootflare.com/logo-categories/');
+    const seo = await fetchRankMathSEO('https://bootflare.com/free-brand-logos/');
     if (seo) return mapRankMathToMetadata(seo);
     return { title: 'Logo Categories | Bootflare' };
 }
@@ -25,7 +25,7 @@ const GET_CATEGORIES_DATA = `
         count
       }
     }
-    taxonomy: taxonomy(id: "logo_category", idType: NAME) {
+    taxonomy: taxonomy(id: "logos", idType: NAME) {
       name
       description
     }
@@ -55,7 +55,7 @@ export default async function LogoCategoriesArchive() {
     try {
         const [gqlData, seoResult] = await Promise.all([
             fetchGraphQL<CategoriesData>(GET_CATEGORIES_DATA),
-            fetchRankMathSEO('https://bootflare.com/logo-categories/')
+            fetchRankMathSEO('https://bootflare.com/free-brand-logos/')
         ]);
 
         if (gqlData && gqlData.categories) {
@@ -88,10 +88,10 @@ export default async function LogoCategoriesArchive() {
 
     // The description logic is updated to remove reliance on wpData,
     // which was previously populated by GraphQL.
-    const description = taxonomyMeta?.description
-        ? decodeEntities(taxonomyMeta.description)
-        : seoData?.description
-            ? decodeEntities(seoData.description)
+    const description = seoData?.description
+        ? decodeEntities(seoData.description)
+        : taxonomyMeta?.description
+            ? decodeEntities(taxonomyMeta.description)
             : 'Explore our comprehensive directory of brand categories. Find the perfect logo for any industry or style.';
 
     const pageTitle = taxonomyMeta?.name || 'Logo Categories';
