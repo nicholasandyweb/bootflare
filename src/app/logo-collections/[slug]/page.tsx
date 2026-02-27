@@ -16,21 +16,32 @@ const GET_COLLECTION_DATA = `
       databaseId
       name
       description
-      logos(where: { offsetPagination: { offset: $offset, size: $size } }) {
-        pageInfo {
-          offsetPagination {
-            total
+    }
+    logos(where: { 
+      offsetPagination: { offset: $offset, size: $size },
+      taxQuery: {
+        taxArray: [
+          {
+            taxonomy: LOGOCOLLECTION,
+            field: SLUG,
+            terms: [$slug]
           }
+        ]
+      }
+    }) {
+      pageInfo {
+        offsetPagination {
+          total
         }
-        nodes {
-          databaseId
-          title
-          slug
-          featuredImage {
-            node {
-              sourceUrl
-              altText
-            }
+      }
+      nodes {
+        databaseId
+        title
+        slug
+        featuredImage {
+          node {
+            sourceUrl
+            altText
           }
         }
       }
@@ -43,11 +54,11 @@ interface CollectionData {
         databaseId: number;
         name: string;
         description?: string;
-        logos: {
-            nodes: any[];
-            pageInfo: { offsetPagination: { total: number } };
-        };
     } | null;
+    logos: {
+        nodes: any[];
+        pageInfo: { offsetPagination: { total: number } };
+    };
 }
 
 export default async function LogoCollectionPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -64,11 +75,12 @@ export default async function LogoCollectionPage({ params }: { params: Promise<{
         const offset = (page - 1) * perPage;
         const data = await fetchGraphQL<CollectionData>(GET_COLLECTION_DATA, { slug, offset, size: perPage });
 
-        if (data && data.logoCollection) {
+        if (data && data.logoCollection && data.logos) {
             const col = data.logoCollection;
+            const logoData = data.logos;
             collectionName = col.name;
             collectionDescription = col.description || '';
-            logos = col.logos.nodes.map(node => ({
+            logos = logoData.nodes.map(node => ({
                 id: node.databaseId,
                 title: { rendered: node.title },
                 slug: node.slug,
@@ -79,9 +91,9 @@ export default async function LogoCollectionPage({ params }: { params: Promise<{
                     }] : []
                 }
             }));
-            totalPages = Math.ceil(col.logos.pageInfo.offsetPagination.total / perPage);
+            totalPages = Math.ceil(logoData.pageInfo.offsetPagination.total / perPage);
         } else {
-            throw new Error('GraphQL returned no data for collection');
+            throw new Error('GraphQL returned no data for collection or logos');
         }
     } catch (error) {
         console.warn('GraphQL failed for LogoCollection, falling back to REST:', error);

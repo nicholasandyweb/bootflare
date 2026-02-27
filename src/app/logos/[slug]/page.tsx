@@ -17,21 +17,32 @@ const GET_CATEGORY_DATA = `
       databaseId
       name
       description
-      logos(where: { offsetPagination: { offset: $offset, size: $size } }) {
-        pageInfo {
-          offsetPagination {
-            total
+    }
+    logos(where: { 
+      offsetPagination: { offset: $offset, size: $size },
+      taxQuery: {
+        taxArray: [
+          {
+            taxonomy: LOGOCATEGORY,
+            field: SLUG,
+            terms: [$slug]
           }
+        ]
+      }
+    }) {
+      pageInfo {
+        offsetPagination {
+          total
         }
-        nodes {
-          databaseId
-          title
-          slug
-          featuredImage {
-            node {
-              sourceUrl
-              altText
-            }
+      }
+      nodes {
+        databaseId
+        title
+        slug
+        featuredImage {
+          node {
+            sourceUrl
+            altText
           }
         }
       }
@@ -44,11 +55,11 @@ interface CategoryData {
         databaseId: number;
         name: string;
         description?: string;
-        logos: {
-            nodes: any[];
-            pageInfo: { offsetPagination: { total: number } };
-        };
     } | null;
+    logos: {
+        nodes: any[];
+        pageInfo: { offsetPagination: { total: number } };
+    };
 }
 
 export default async function LogoCategory({ params }: { params: Promise<{ slug: string }> }) {
@@ -65,11 +76,12 @@ export default async function LogoCategory({ params }: { params: Promise<{ slug:
         const offset = (page - 1) * perPage;
         const data = await fetchGraphQL<CategoryData>(GET_CATEGORY_DATA, { slug, offset, size: perPage });
 
-        if (data && data.logoCategory) {
+        if (data && data.logoCategory && data.logos) {
             const cat = data.logoCategory;
+            const logoData = data.logos;
             categoryName = cat.name;
             categoryDescription = cat.description || '';
-            logos = cat.logos.nodes.map(node => ({
+            logos = logoData.nodes.map(node => ({
                 id: node.databaseId,
                 title: { rendered: node.title },
                 slug: node.slug,
@@ -80,9 +92,9 @@ export default async function LogoCategory({ params }: { params: Promise<{ slug:
                     }] : []
                 }
             }));
-            totalPages = Math.ceil(cat.logos.pageInfo.offsetPagination.total / perPage);
+            totalPages = Math.ceil(logoData.pageInfo.offsetPagination.total / perPage);
         } else {
-            throw new Error('GraphQL returned no data for category');
+            throw new Error('GraphQL returned no data for category or logos');
         }
     } catch (error) {
         console.warn('GraphQL failed for LogoCategory, falling back to REST:', error);
