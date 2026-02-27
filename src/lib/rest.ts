@@ -29,6 +29,7 @@ export async function fetchREST(endpoint: string, retries = 2, namespace = 'wp/v
                     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                     'Accept': 'application/json'
                 },
+                cache: 'force-cache',
                 next: { revalidate: 3600 }, // Cache on edge for 1 hour
                 signal: controller.signal
             });
@@ -154,6 +155,7 @@ export async function fetchRESTWithMeta(endpoint: string, retries = 2, namespace
                     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                     'Accept': 'application/json'
                 },
+                cache: 'force-cache',
                 next: { revalidate: 3600 }, // Cache on edge for 1 hour
                 signal: controller.signal
             });
