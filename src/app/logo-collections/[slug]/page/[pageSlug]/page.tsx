@@ -5,8 +5,7 @@ import LogoCard from '@/components/LogoCard';
 import Pagination from '@/components/Pagination';
 import LogoSearch from '@/components/LogoSearch';
 
-export const dynamicParams = true;
-export const dynamic = 'force-dynamic';
+
 
 import { fetchGraphQL } from '@/lib/graphql';
 

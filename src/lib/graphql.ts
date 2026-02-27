@@ -2,6 +2,8 @@ import { GraphQLClient } from 'graphql-request';
 
 const WP_GRAPHQL_URL = 'https://bootflare.com/graphql';
 const endpoint = process.env.WORDPRESS_GRAPHQL_ENDPOINT || WP_GRAPHQL_URL;
+const devCache = new Map<string, { data: any; timestamp: number }>();
+const CACHE_TTL = 10 * 60 * 1000; // 10 minutes
 
 export const client = new GraphQLClient(endpoint, {
   headers: {
@@ -11,6 +13,14 @@ export const client = new GraphQLClient(endpoint, {
 });
 
 export async function fetchGraphQL<T>(query: string, variables?: Record<string, unknown>, retries = 2): Promise<T> {
+  // Check dev cache first
+  const cacheKey = JSON.stringify({ query, variables });
+  if (process.env.NODE_ENV === 'development') {
+    const cached = devCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+      return cached.data;
+    }
+  }
   for (let i = 0; i < retries; i++) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
@@ -77,6 +87,9 @@ export async function fetchGraphQL<T>(query: string, variables?: Record<string, 
         return null as any as T;
       }
 
+      if (process.env.NODE_ENV === 'development') {
+        devCache.set(cacheKey, { data: json.data, timestamp: Date.now() });
+      }
       return json.data;
     } catch (error) {
       clearTimeout(timeoutId);
