@@ -101,6 +101,8 @@ export default async function RoyaltyFreeMusicPagination({ params }: { params: P
             }));
             totalPages = Math.ceil(gqlData.playlists.pageInfo.offsetPagination.total / perPage);
             wpData = { page: gqlData.page || { title: 'Royalty Free Music' } };
+        } else {
+            throw new Error('Albums not found via GraphQL, triggering fallback');
         }
         seoData = seo;
     } catch (error) {

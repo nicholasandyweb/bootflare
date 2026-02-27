@@ -89,6 +89,8 @@ export default async function SingleMusic({ params, searchParams }: { params: Pr
 
             const trackData = await fetchREST(`https://bootflare.com/?load=playlist.json&albums=${p.databaseId}`);
             allTracks = trackData.tracks || [];
+        } else {
+            throw new Error('Album not found via GraphQL, triggering fallback');
         }
     } catch (error) {
         console.warn('GraphQL failed for Album page, falling back to REST:', error);

@@ -88,6 +88,8 @@ export default async function AlbumArchive({ searchParams }: { searchParams: Pro
             }));
             totalPages = Math.ceil(gqlData.playlists.pageInfo.offsetPagination.total / perPage);
             wpData = { page: gqlData.page || { title: 'High-Quality Music Albums' } };
+        } else {
+            throw new Error('Albums not found via GraphQL, triggering fallback');
         }
         seoData = seo;
     } catch (error) {
