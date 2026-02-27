@@ -9,6 +9,9 @@ import CategoryList from '@/components/CategoryList';
 
 
 import { fetchGraphQL } from '@/lib/graphql';
+import { Suspense } from 'react';
+import CategoryListSkeleton from '@/components/CategoryListSkeleton';
+import { Metadata } from 'next';
 
 const GET_CATEGORY_DATA = `
   query GetLogoCategoryWithLogos($slug: ID!, $offset: Int, $size: Int) {
@@ -58,6 +61,15 @@ interface CategoryData {
     logos: {
         nodes: any[];
         pageInfo: { offsetPagination: { total: number } };
+    };
+}
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+    const { slug } = await params;
+    const displayName = slug.charAt(0).toUpperCase() + slug.slice(1);
+    return {
+        title: `${displayName} Logos | Download Free ${displayName} Brand Logos | Bootflare`,
+        description: `Download high-quality free brand logos for ${displayName}. Browse our extensive collection of ${displayName} logos in various formats.`
     };
 }
 
@@ -163,7 +175,9 @@ export default async function LogoCategory({ params }: { params: Promise<{ slug:
                     </div>
                 )}
 
-                <CategoryList />
+                <Suspense fallback={<CategoryListSkeleton />}>
+                    <CategoryList />
+                </Suspense>
             </div>
         </div>
     );

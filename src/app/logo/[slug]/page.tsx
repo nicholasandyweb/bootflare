@@ -120,42 +120,56 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 }
 
 async function getRelatedLogos(logo: LogoNode) {
-    try {
-        // Step 1: Try fetching from Contextual Related Posts (CRP) plugin using the internal databaseId
-        const crpResults: { id?: number; ID?: number }[] = await fetchREST(`posts/${logo.databaseId}`, 3, 'contextual-related-posts/v1');
+    let relatedLogos: any[] = [];
+    const targetCount = 8;
+    const excludedIds = [logo.databaseId];
 
-        if (crpResults && crpResults.length > 0) {
+    try {
+        // Step 1: Try fetching from Contextual Related Posts (CRP) plugin
+        const crpResults: { id?: number; ID?: number }[] = await fetchREST(`posts/${logo.databaseId}?limit=${targetCount}`, 3, 'contextual-related-posts/v1');
+
+        if (crpResults && Array.isArray(crpResults) && crpResults.length > 0) {
             const relatedIds = Array.from(new Set(
                 crpResults.map(item => item.id || item.ID).filter(id => id && id !== logo.databaseId)
             ));
 
             if (relatedIds.length > 0) {
-                const crpLogos = await fetchREST(`logo?include=${relatedIds.join(',')}&_embed&per_page=4&_fields=id,title,slug,_links,_embedded`);
-                if (crpLogos && crpLogos.length > 0) {
-                    return crpLogos.map((l: any) => ({
+                const crpLogos = await fetchREST(`logo?include=${relatedIds.join(',')}&_embed&per_page=${targetCount}&_fields=id,title,slug,_links,_embedded`);
+                if (crpLogos && Array.isArray(crpLogos)) {
+                    relatedLogos = crpLogos.map((l: any) => ({
                         id: l.id,
                         title: { rendered: l.title.rendered },
                         slug: l.slug,
                         _embedded: l._embedded
                     }));
+                    relatedLogos.forEach(l => excludedIds.push(l.id));
                 }
             }
         }
 
-        // Step 2: Fallback to category-based latest if CRP is empty
-        const catSlugs = logo.logoCategories?.nodes.map(n => n.slug) || [];
-        const categoryFilter = catSlugs.length > 0 ? `&logos=${catSlugs[0]}` : '';
-        const related = await fetchREST(`logo?per_page=4&exclude=${logo.databaseId}${categoryFilter}&_embed&_fields=id,title,slug,_links,_embedded`);
+        // Step 2: Fill remaining slots with category-based latest if we have less than targetCount
+        if (relatedLogos.length < targetCount) {
+            const remaining = targetCount - relatedLogos.length;
+            const catSlugs = logo.logoCategories?.nodes.map(n => n.slug) || [];
+            const categoryFilter = catSlugs.length > 0 ? `&logos=${catSlugs[0]}` : '';
 
-        return related.map((l: any) => ({
-            id: l.id,
-            title: { rendered: l.title.rendered },
-            slug: l.slug,
-            _embedded: l._embedded
-        }));
+            const fallbackResults = await fetchREST(`logo?per_page=${remaining}&exclude=${excludedIds.join(',')}${categoryFilter}&_embed&_fields=id,title,slug,_links,_embedded`);
+
+            if (fallbackResults && Array.isArray(fallbackResults)) {
+                const fallbackLogos = fallbackResults.map((l: any) => ({
+                    id: l.id,
+                    title: { rendered: l.title.rendered },
+                    slug: l.slug,
+                    _embedded: l._embedded
+                }));
+                relatedLogos = [...relatedLogos, ...fallbackLogos];
+            }
+        }
+
+        return relatedLogos;
     } catch (error) {
         console.error('Error fetching related logos:', error);
-        return [];
+        return relatedLogos;
     }
 }
 
@@ -323,7 +337,7 @@ function RelatedLogosSkeleton() {
                 <div className="h-8 w-44 bg-slate-200 rounded-xl mx-auto" />
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
-                {[...Array(4)].map((_, i) => (
+                {[...Array(8)].map((_, i) => (
                     <div key={i} className="aspect-square bg-slate-100 rounded-[1.5rem]" />
                 ))}
             </div>
