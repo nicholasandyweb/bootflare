@@ -25,7 +25,6 @@ const Header = () => {
                 <nav className="hidden lg:flex gap-8 items-center">
                     <Link href="/" className="font-bold text-primary">Home</Link>
                     <Link href="/about-us" className="font-semibold text-slate-600 hover:text-primary transition-colors">About</Link>
-
                     <div className="group relative">
                         <button className="flex items-center gap-1 font-semibold text-slate-600 hover:text-primary transition-colors py-2">
                             Downloads <ChevronDown className="w-4 h-4" />
