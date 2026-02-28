@@ -1,4 +1,5 @@
 import { GraphQLClient } from 'graphql-request';
+import { unstable_cache } from 'next/cache';
 
 const WP_GRAPHQL_URL = 'https://bootflare.com/graphql';
 const endpoint = process.env.WORDPRESS_GRAPHQL_ENDPOINT || WP_GRAPHQL_URL;
@@ -12,15 +13,7 @@ export const client = new GraphQLClient(endpoint, {
   },
 });
 
-export async function fetchGraphQL<T>(query: string, variables?: Record<string, unknown>, retries = 2): Promise<T> {
-  // Check dev cache first
-  const cacheKey = JSON.stringify({ query, variables });
-  if (process.env.NODE_ENV === 'development') {
-    const cached = devCache.get(cacheKey);
-    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-      return cached.data;
-    }
-  }
+async function _doFetch<T>(query: string, variables: Record<string, unknown> | undefined, retries: number): Promise<T> {
   for (let i = 0; i < retries; i++) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
@@ -34,8 +27,6 @@ export async function fetchGraphQL<T>(query: string, variables?: Record<string, 
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         },
         body: JSON.stringify({ query, variables }),
-        cache: 'force-cache',
-        next: { revalidate: 3600 },
         signal: controller.signal
       });
       clearTimeout(timeoutId);
@@ -88,9 +79,6 @@ export async function fetchGraphQL<T>(query: string, variables?: Record<string, 
         return null as any as T;
       }
 
-      if (process.env.NODE_ENV === 'development') {
-        devCache.set(cacheKey, { data: json.data, timestamp: Date.now() });
-      }
       return json.data;
     } catch (error) {
       clearTimeout(timeoutId);
@@ -107,4 +95,31 @@ export async function fetchGraphQL<T>(query: string, variables?: Record<string, 
 
   console.warn('Failed to fetch GraphQL API after max retries, returning null for fallback.');
   return null as any as T;
+}
+
+export async function fetchGraphQL<T>(query: string, variables?: Record<string, unknown>, retries = 2): Promise<T> {
+  const cacheKey = JSON.stringify({ query, variables });
+
+  // Dev: use fast in-memory cache to avoid repeated network hits during local development
+  if (process.env.NODE_ENV === 'development') {
+    const cached = devCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+      return cached.data;
+    }
+    const result = await _doFetch<T>(query, variables, retries);
+    devCache.set(cacheKey, { data: result, timestamp: Date.now() });
+    return result;
+  }
+
+  // Production: use Next.js Data Cache so page reloads within the revalidation
+  // window are served instantly without hitting the WordPress GraphQL endpoint.
+  // POST requests are NOT cached by Next.js fetch natively, so we use
+  // unstable_cache to persist results across requests.
+  const getCached = unstable_cache(
+    () => _doFetch<T>(query, variables, retries),
+    [cacheKey],
+    { revalidate: 3600, tags: ['graphql'] }
+  );
+
+  return getCached();
 }
