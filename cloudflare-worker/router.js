@@ -9,13 +9,12 @@
  *   /wp-login.php      → WordPress (shared hosting origin)
  *   /wp-signup.php     → WordPress (shared hosting origin)
  *   /xmlrpc.php        → WordPress (shared hosting origin)
- *   everything else    → Next.js (Cloudflare Pages)
+ *   everything else    → Next.js Worker (via Service Binding)
  *
  * Setup in Cloudflare Dashboard:
  *   1. Go to Workers & Pages → Create → Worker (this acts as your "Front Door")
  *   2. Paste this script
- *   3. Set environment variable: ORIGIN_URL = https://bootflare.crimson-mud-7db5.workers.dev
- *      (This is the URL of your Next.js app deployed via OpenNext)
+ *   3. Add a Service Binding: NEXTJS_WORKER → bootflare (your Next.js worker)
  *   4. Add Worker Route: bootflare.com/* → this worker
  */
 
@@ -113,20 +112,12 @@ export default {
             return response;
         }
 
-        // ── Next.js: forward to Origin Worker ──────────────────────────
-        const originBase = env.ORIGIN_URL;
+        // ── Next.js: forward to Origin Worker via Service Binding ────
+        const nextjsWorker = env.NEXTJS_WORKER;
 
-        if (!originBase) {
-            console.error('ERROR: ORIGIN_URL environment variable is missing.');
-            return new Response('Worker Configuration Error: ORIGIN_URL is missing.', { status: 500 });
-        }
-
-        let targetUrl;
-        try {
-            targetUrl = new URL(pathname + url.search, originBase);
-        } catch (e) {
-            console.error(`ERROR: Failed to construct targetUrl. pathname: "${pathname}", originBase: "${originBase}"`);
-            return new Response(`Worker Configuration Error: Invalid ORIGIN_URL ("${originBase}")`, { status: 500 });
+        if (!nextjsWorker) {
+            console.error('ERROR: NEXTJS_WORKER service binding is missing.');
+            return new Response('Worker Configuration Error: NEXTJS_WORKER binding is missing.', { status: 500 });
         }
 
         // --- Cache Logic ---
@@ -139,7 +130,6 @@ export default {
 
         // Create a stable cache key
         let cacheUrl = new URL(request.url);
-        // We no longer normalize RSC to __data.json because prefetch and nav use different streams.
 
         let cacheKey;
         try {
@@ -157,29 +147,14 @@ export default {
         if (useCache) {
             const cachedResponse = await cache.match(cacheKey);
             if (cachedResponse) {
-                // Return cached response but add a header to indicate it's from the worker cache
                 const response = new Response(cachedResponse.body, cachedResponse);
                 response.headers.set('X-Worker-Cache', 'HIT');
                 return response;
             }
         }
 
-        const newRequest = new Request(targetUrl.toString(), {
-            method: request.method,
-            headers: (() => {
-                const h = new Headers(request.headers);
-                // Tell Cloudflare Pages which domain is serving this
-                h.set('Host', 'bootflare.com');
-                // Pass the real visitor IP along
-                h.set('X-Forwarded-For', request.headers.get('CF-Connecting-IP') || '');
-                h.set('X-Forwarded-Host', 'bootflare.com');
-                return h;
-            })(),
-            body: ['GET', 'HEAD'].includes(request.method) ? null : request.body,
-            redirect: 'manual',
-        });
-
-        let response = await fetch(newRequest);
+        // Service Binding call: direct worker-to-worker, no HTTP round-trip
+        let response = await nextjsWorker.fetch(request);
 
         // Store in cache if status is OK and it's a cacheable method
         if (useCache && response.ok) {
