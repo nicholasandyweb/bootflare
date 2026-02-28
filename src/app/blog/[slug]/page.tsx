@@ -264,7 +264,7 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
           </div>
 
           {/* Comments Section */}
-          <CommentsSection comments={post.comments?.nodes || []} postId={post.databaseId} /> />
+          <CommentsSection comments={post.comments?.nodes || []} postId={post.databaseId} />
         </div>
       </div>
     </article>
