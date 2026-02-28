@@ -118,6 +118,20 @@ h6 {
   margin-bottom: 2rem;
 }
 
+/* Blog in-article links (including "See also" sections) */
+.article-content a {
+  color: #8b5cf6;
+  font-weight: 600;
+  text-decoration: none;
+  border-bottom: 1px solid rgba(139, 92, 246, 0.25);
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.article-content a:hover {
+  color: #7c3aed;
+  border-bottom-color: rgba(124, 58, 237, 0.6);
+}
+
 /* ─── About Us Page: Custom Service Blocks ──────────────────────────────────
    Specific layout for the service list: Icons on the side of Title & Text.
    We target common WP/Elementor patterns and use flexible floats for flat HTML.
