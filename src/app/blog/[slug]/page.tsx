@@ -1,6 +1,6 @@
 export const revalidate = 86400; // 24 hours
 import { fetchGraphQL } from '@/lib/graphql';
-import { stripScripts } from '@/lib/sanitize';
+import { rewriteBlogInternalLinks, stripScripts } from '@/lib/sanitize';
 import { Calendar, User, ArrowLeft, Share2, Clock, AlertTriangle, MessageCircle, Facebook, Twitter, Linkedin } from 'lucide-react';
 import Link from 'next/link';
 import { Metadata } from 'next';
@@ -182,7 +182,7 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
     );
   }
 
-  const sanitizedContent = stripScripts(post.content);
+  const sanitizedContent = rewriteBlogInternalLinks(stripScripts(post.content));
   const categories = post.categories?.nodes || [];
   const authorName = post.author?.node?.name || "Bootflare Editorial";
   const authorAvatar = post.author?.node?.avatar?.url;

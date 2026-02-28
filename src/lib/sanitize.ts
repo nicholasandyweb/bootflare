@@ -8,6 +8,37 @@ export function stripScripts(html: string | undefined): string {
 }
 
 /**
+ * Rewrites internal WordPress post links in blog content so that links like
+ * https://bootflare.com/some-post/ or /some-post/ become /blog/some-post.
+ *
+ * This fixes in-article "See also" style links that would otherwise point to
+ * non-existent root-level routes in the Next.js app.
+ */
+export function rewriteBlogInternalLinks(html: string | undefined): string {
+    if (!html) return "";
+
+    let output = html;
+
+    // Absolute links: https://bootflare.com/some-post[/...]
+    const absolutePattern = /href="https?:\/\/bootflare\.com\/(?:www\.)?([^"?#\/]+)\/?([^\"]*)"/gi;
+    output = output.replace(absolutePattern, (match, slug, rest) => {
+        if (!slug) return match;
+        const suffix = rest || "";
+        return `href="/blog/${slug}${suffix}"`;
+    });
+
+    // Root-relative links: /some-post[/...]
+    const relativePattern = /href="\/([^"?#\/]+)\/?([^\"]*)"/gi;
+    output = output.replace(relativePattern, (match, slug, rest) => {
+        if (!slug) return match;
+        const suffix = rest || "";
+        return `href="/blog/${slug}${suffix}"`;
+    });
+
+    return output;
+}
+
+/**
  * Strips specific unwanted terms from the content.
  * Used to clean up icon labels injected by plugins.
  */
