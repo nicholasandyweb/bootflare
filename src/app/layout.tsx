@@ -32,7 +32,7 @@ export default function RootLayout({
         suppressHydrationWarning
       >
         <Header />
-        <main className="mt-20 min-h-screen">
+        <main className="mt-16 min-h-screen">
           {children}
         </main>
         <Footer />
