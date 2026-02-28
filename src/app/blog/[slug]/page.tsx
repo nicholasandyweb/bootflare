@@ -1,7 +1,7 @@
 export const revalidate = 86400; // 24 hours
 import { fetchGraphQL } from '@/lib/graphql';
 import { stripScripts } from '@/lib/sanitize';
-import { Calendar, User, ArrowLeft, Share2, Clock, AlertTriangle } from 'lucide-react';
+import { Calendar, User, ArrowLeft, Share2, Clock, AlertTriangle, MessageCircle } from 'lucide-react';
 import Link from 'next/link';
 import { Metadata } from 'next';
 import { fetchRankMathSEO, mapRankMathToMetadata, mapWPToMetadata } from '@/lib/seo';
@@ -35,9 +35,42 @@ const GET_POST_BY_SLUG = `
           slug
         }
       }
+      comments(first: 50, where: { order: ASC }) {
+        nodes {
+          id
+          databaseId
+          content
+          date
+          author {
+            node {
+              name
+              avatar {
+                url
+              }
+            }
+          }
+          parentId
+        }
+      }
     }
   }
 `;
+
+interface GQLComment {
+  id: string;
+  databaseId: number;
+  content: string;
+  date: string;
+  author: {
+    node: {
+      name: string;
+      avatar?: {
+        url: string;
+      };
+    };
+  };
+  parentId: string | null;
+}
 
 interface GQLPost {
   id: string;
@@ -61,6 +94,9 @@ interface GQLPost {
       name: string;
       slug: string;
     }[];
+  };
+  comments?: {
+    nodes: GQLComment[];
   };
 }
 
@@ -223,9 +259,114 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
               </div>
             </div>
           </div>
+
+          {/* Comments Section */}
+          <CommentsSection comments={post.comments?.nodes || []} />
         </div>
       </div>
     </article>
+  );
+}
+
+function CommentsSection({ comments }: { comments: GQLComment[] }) {
+  // Build a tree structure for nested comments
+  const rootComments = comments.filter(c => !c.parentId);
+  const childComments = comments.filter(c => c.parentId);
+
+  const getChildComments = (parentId: string) => 
+    childComments.filter(c => c.parentId === parentId);
+
+  if (comments.length === 0) {
+    return (
+      <div className="mt-20 pt-16 border-t border-slate-100">
+        <h2 className="text-2xl font-bold text-slate-900 mb-8 flex items-center gap-3">
+          <MessageCircle className="w-6 h-6 text-primary" />
+          Comments
+        </h2>
+        <p className="text-slate-500 text-center py-12 bg-slate-50 rounded-2xl">
+          No comments yet. Be the first to share your thoughts!
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-20 pt-16 border-t border-slate-100">
+      <h2 className="text-2xl font-bold text-slate-900 mb-8 flex items-center gap-3">
+        <MessageCircle className="w-6 h-6 text-primary" />
+        {comments.length} Comment{comments.length > 1 ? 's' : ''}
+      </h2>
+      <div className="space-y-8">
+        {rootComments.map(comment => (
+          <CommentItem key={comment.id} comment={comment} replies={getChildComments(comment.id)} getChildComments={getChildComments} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function CommentItem({ 
+  comment, 
+  replies, 
+  getChildComments,
+  depth = 0 
+}: { 
+  comment: GQLComment; 
+  replies: GQLComment[];
+  getChildComments: (parentId: string) => GQLComment[];
+  depth?: number;
+}) {
+  const authorName = comment.author?.node?.name || 'Anonymous';
+  const avatarUrl = comment.author?.node?.avatar?.url;
+  const date = new Date(comment.date).toLocaleDateString(undefined, { 
+    month: 'short', 
+    day: 'numeric', 
+    year: 'numeric' 
+  });
+
+  return (
+    <div className={depth > 0 ? 'ml-8 pl-6 border-l-2 border-slate-100' : ''}>
+      <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
+        <div className="flex items-start gap-4">
+          {avatarUrl ? (
+            <img 
+              src={avatarUrl} 
+              alt={authorName}
+              className="w-12 h-12 rounded-full object-cover flex-shrink-0"
+            />
+          ) : (
+            <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 flex-shrink-0">
+              <User className="w-6 h-6" />
+            </div>
+          )}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-3 mb-2">
+              <span className="font-bold text-slate-900">{authorName}</span>
+              <span className="text-xs text-slate-400">{date}</span>
+            </div>
+            <div 
+              className="text-slate-600 prose prose-sm max-w-none [&_p]:mb-2 [&_p:last-child]:mb-0"
+              dangerouslySetInnerHTML={{ __html: comment.content }}
+            />
+          </div>
+        </div>
+      </div>
+      
+      {/* Nested replies */}
+      {replies.length > 0 && (
+        <div className="mt-4 space-y-4">
+          {replies.map(reply => (
+            <CommentItem 
+              key={reply.id} 
+              comment={reply} 
+              replies={getChildComments(reply.id)}
+              getChildComments={getChildComments}
+              depth={depth + 1} 
+            />
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
