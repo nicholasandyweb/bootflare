@@ -120,7 +120,8 @@ export async function fetchREST(endpoint: string, retries = 2, namespace = 'wp/v
             }
 
             if (i === retries - 1) {
-                throw error;
+                console.error(`Error fetching from REST API (${url}):`, error);
+                return null;
             }
             const waitTime = Math.pow(2, i) * 1000;
             console.warn(`Retry ${i + 1}/${retries} for ${url} after ${waitTime}ms due to network error: ${error instanceof Error ? error.message : String(error)}`);
@@ -252,7 +253,8 @@ export async function fetchRESTWithMeta(endpoint: string, retries = 2, namespace
             }
 
             if (i === retries - 1) {
-                throw error;
+                console.error(`Error fetching from REST API (${url}):`, error);
+                return null;
             }
             const waitTime = Math.pow(2, i) * 1000;
             console.warn(`Retry ${i + 1}/${retries} for ${url} after ${waitTime}ms due to network error: ${error instanceof Error ? error.message : String(error)}`);
