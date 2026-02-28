@@ -58,25 +58,25 @@ async function _doFetch(query: string, variablesJson: string, retries: number): 
         // Detect Imunify360 or Cloudflare bot challenges which return HTML
         if (text.includes('Imunify360') || text.toLowerCase().includes('bot-protection') || text.includes('Challenge Validation')) {
           console.warn('Bot protection detected, returning null to allow graceful fallback.');
-          return null as any as T;
+          return null;
         }
 
-        if (i === retries - 1) return null as any as T;
+        if (i === retries - 1) return null;
         continue;
       }
 
       if (json.errors) {
         console.warn('GraphQL Errors:', JSON.stringify(json.errors, null, 2));
-        return null as any as T;
+        return null;
       }
       if (!json.data) {
         // Handle cases where Imunify returns JSON with a message instead of actual GraphQL data
         if (json.message && json.message.includes('Imunify360')) {
           console.warn('Imunify360 bot-protection JSON detected, returning null.');
-          return null as any as T;
+          return null;
         }
         console.warn('GraphQL Response missing "data" field:', JSON.stringify(json, null, 2));
-        return null as any as T;
+        return null;
       }
 
       return json.data;
@@ -94,7 +94,7 @@ async function _doFetch(query: string, variablesJson: string, retries: number): 
   }
 
   console.warn('Failed to fetch GraphQL API after max retries, returning null for fallback.');
-  return null as any as T;
+  return null;
 }
 
 // Module-level stable cached function — must NOT be created inside fetchGraphQL,
