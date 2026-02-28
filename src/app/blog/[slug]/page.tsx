@@ -1,7 +1,7 @@
 export const revalidate = 86400; // 24 hours
 import { fetchGraphQL } from '@/lib/graphql';
 import { stripScripts } from '@/lib/sanitize';
-import { Calendar, User, ArrowLeft, Share2, Clock, AlertTriangle, MessageCircle } from 'lucide-react';
+import { Calendar, User, ArrowLeft, Share2, Clock, AlertTriangle, MessageCircle, Facebook, Twitter, Linkedin } from 'lucide-react';
 import Link from 'next/link';
 import { Metadata } from 'next';
 import { fetchRankMathSEO, mapRankMathToMetadata, mapWPToMetadata } from '@/lib/seo';
@@ -29,6 +29,9 @@ const GET_POST_BY_SLUG = `
       author {
         node {
           name
+          avatar {
+            url
+          }
         }
       }
       categories {
@@ -90,6 +93,9 @@ interface GQLPost {
   author?: {
     node: {
       name: string;
+      avatar?: {
+        url: string;
+      };
     };
   };
   categories?: {
@@ -179,7 +185,9 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
   const sanitizedContent = stripScripts(post.content);
   const categories = post.categories?.nodes || [];
   const authorName = post.author?.node?.name || "Bootflare Editorial";
+  const authorAvatar = post.author?.node?.avatar?.url;
   const featuredImage = post.featuredImage?.node?.sourceUrl;
+  const shareUrl = `https://bootflare.com/blog/${post.slug}`;
 
   return (
     <article className="bg-white min-h-screen pb-20" suppressHydrationWarning>
@@ -240,9 +248,17 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
                 <div className="p-8 rounded-[2rem] bg-slate-50 border border-slate-100">
                   <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-6">Published By</h4>
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-full bg-slate-200 flex items-center justify-center text-slate-400">
-                      <User className="w-6 h-6" />
-                    </div>
+                    {authorAvatar ? (
+                      <img 
+                        src={authorAvatar} 
+                        alt={authorName}
+                        className="w-12 h-12 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 rounded-full bg-slate-200 flex items-center justify-center text-slate-400">
+                        <User className="w-6 h-6" />
+                      </div>
+                    )}
                     <div>
                       <p className="font-bold text-slate-900">{authorName}</p>
                       <p className="text-xs text-slate-500">Editorial Team</p>
@@ -254,9 +270,33 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
                 <div>
                   <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-6">Spread the knowledge</h4>
                   <div className="flex gap-3">
-                    <button className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 hover:bg-primary hover:text-white transition-all">
-                      <Share2 className="w-4 h-4" />
-                    </button>
+                    <a 
+                      href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 hover:bg-[#1877F2] hover:text-white transition-all"
+                      aria-label="Share on Facebook"
+                    >
+                      <Facebook className="w-4 h-4" />
+                    </a>
+                    <a 
+                      href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(post.title)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 hover:bg-black hover:text-white transition-all"
+                      aria-label="Share on X"
+                    >
+                      <Twitter className="w-4 h-4" />
+                    </a>
+                    <a 
+                      href={`https://www.linkedin.com/shareArticle?mini=true&url=${encodeURIComponent(shareUrl)}&title=${encodeURIComponent(post.title)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 hover:bg-[#0A66C2] hover:text-white transition-all"
+                      aria-label="Share on LinkedIn"
+                    >
+                      <Linkedin className="w-4 h-4" />
+                    </a>
                   </div>
                 </div>
               </div>
