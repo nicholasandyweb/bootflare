@@ -158,7 +158,7 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
                         return (
                             <article key={post.id} className="card-premium !p-0 flex flex-col group h-full transition-all hover:shadow-2xl hover:shadow-primary/5">
                                 {featuredImage && (
-                                    <Link href={`/blog/${post.slug}`} className="relative h-64 overflow-hidden rounded-t-[2rem]">
+                                    <Link href={`/blog/${post.slug}`} prefetch={false} className="relative h-64 overflow-hidden rounded-t-[2rem]">
                                         <img
                                             src={featuredImage}
                                             alt={post.title}
@@ -177,7 +177,7 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
                                         </div>
                                     </div>
 
-                                    <Link href={`/blog/${post.slug}`} className="mb-4">
+                                    <Link href={`/blog/${post.slug}`} prefetch={false} className="mb-4">
                                         <h3
                                             className="text-xl font-bold text-slate-900 hover:text-primary transition-colors line-clamp-2 leading-tight"
                                             dangerouslySetInnerHTML={{ __html: post.title }}
@@ -189,7 +189,7 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
                                         dangerouslySetInnerHTML={{ __html: stripScripts(post.excerpt) }}
                                     />
 
-                                    <Link href={`/blog/${post.slug}`} className="flex items-center gap-2 text-primary font-bold text-sm group-link">
+                                    <Link href={`/blog/${post.slug}`} prefetch={false} className="flex items-center gap-2 text-primary font-bold text-sm group-link">
                                         Read Story <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                                     </Link>
                                 </div>

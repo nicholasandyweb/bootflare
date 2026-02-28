@@ -123,7 +123,7 @@ export default function HomeClient({ logos, music }: HomeClientProps) {
                             <h3 className="text-4xl md:text-5xl font-bold text-slate-900">Premium Digital Downloads</h3>
                         </div>
                         <div className="flex gap-4">
-                            <Link href="/logos" className="text-slate-600 font-bold hover:text-primary transition-colors flex items-center gap-2">
+                            <Link href="/logos" prefetch={false} className="text-slate-600 font-bold hover:text-primary transition-colors flex items-center gap-2">
                                 View Gallery <ArrowRight className="w-4 h-4" />
                             </Link>
                         </div>
@@ -156,7 +156,7 @@ export default function HomeClient({ logos, music }: HomeClientProps) {
                             </div>
                             <h4 className="text-3xl font-bold mb-6 relative z-10">Royalty Free Music</h4>
                             <p className="opacity-80 mb-10 leading-relaxed relative z-10">High-quality audio tracks for your podcasts, videos, and presentations.</p>
-                            <Link href="/royalty-free-music" className="inline-flex items-center gap-2 px-6 py-3 bg-white text-primary rounded-xl font-bold hover:bg-slate-100 transition-colors relative z-10 shadow-lg">
+                            <Link href="/royalty-free-music" prefetch={false} className="inline-flex items-center gap-2 px-6 py-3 bg-white text-primary rounded-xl font-bold hover:bg-slate-100 transition-colors relative z-10 shadow-lg">
                                 Listen Now <Play className="w-4 h-4 fill-current" />
                             </Link>
                         </div>

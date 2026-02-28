@@ -112,7 +112,7 @@ export default async function BlogPage() {
             <div className="mb-16">
               <div className="grid lg:grid-cols-2 gap-10 items-center bg-white rounded-[3rem] overflow-hidden shadow-sm border border-slate-100 p-6 md:p-10">
                 {featuredImage && (
-                  <Link href={`/blog/${firstPost.slug}`} className="block relative aspect-video rounded-[2rem] overflow-hidden group">
+                  <Link href={`/blog/${firstPost.slug}`} prefetch={false} className="block relative aspect-video rounded-[2rem] overflow-hidden group">
                     <img
                       src={featuredImage}
                       alt={firstPost.title}
@@ -123,12 +123,12 @@ export default async function BlogPage() {
                 <div>
                   <div className="flex gap-2 mb-6">
                     {categories.map(cat => (
-                      <Link key={cat.slug} href={`/category/${cat.slug}`} className="text-xs font-bold text-primary uppercase tracking-widest px-3 py-1 bg-primary/10 rounded-full hover:bg-primary hover:text-white transition-all">
+                      <Link key={cat.slug} href={`/category/${cat.slug}`} prefetch={false} className="text-xs font-bold text-primary uppercase tracking-widest px-3 py-1 bg-primary/10 rounded-full hover:bg-primary hover:text-white transition-all">
                         {cat.name}
                       </Link>
                     ))}
                   </div>
-                  <Link href={`/blog/${firstPost.slug}`}>
+                  <Link href={`/blog/${firstPost.slug}`} prefetch={false}>
                     <h2
                       className="text-3xl md:text-4xl font-bold mb-6 hover:text-primary transition-colors text-slate-900"
                       dangerouslySetInnerHTML={{ __html: firstPost.title }}
@@ -138,7 +138,7 @@ export default async function BlogPage() {
                     className="text-slate-500 text-lg line-clamp-3 mb-8 font-light [&_p]:mb-0"
                     dangerouslySetInnerHTML={{ __html: stripScripts(firstPost.excerpt) }}
                   />
-                  <Link href={`/blog/${firstPost.slug}`} className="btn-premium group !px-10">
+                  <Link href={`/blog/${firstPost.slug}`} prefetch={false} className="btn-premium group !px-10">
                     Read Article <ChevronRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
                   </Link>
                 </div>
@@ -156,7 +156,7 @@ export default async function BlogPage() {
             return (
               <article key={post.id} className="card-premium !p-0 flex flex-col group h-full">
                 {featuredImage && (
-                  <Link href={`/blog/${post.slug}`} className="relative h-64 overflow-hidden rounded-t-[2rem]">
+                  <Link href={`/blog/${post.slug}`} prefetch={false} className="relative h-64 overflow-hidden rounded-t-[2rem]">
                     <img
                       src={featuredImage}
                       alt={post.title}
@@ -169,7 +169,7 @@ export default async function BlogPage() {
                   <div className="flex items-center gap-4 mb-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                     {categories.length > 0 && (
                       <>
-                        <Link href={`/category/${categories[0].slug}`} className="text-primary hover:underline">
+                        <Link href={`/category/${categories[0].slug}`} prefetch={false} className="text-primary hover:underline">
                           {categories[0].name}
                         </Link>
                         <span>•</span>
@@ -181,7 +181,7 @@ export default async function BlogPage() {
                     </div>
                   </div>
 
-                  <Link href={`/blog/${post.slug}`} className="mb-4">
+                  <Link href={`/blog/${post.slug}`} prefetch={false} className="mb-4">
                     <h3
                       className="text-xl font-bold text-slate-900 hover:text-primary transition-colors line-clamp-2 leading-tight"
                       dangerouslySetInnerHTML={{ __html: post.title }}
@@ -193,7 +193,7 @@ export default async function BlogPage() {
                     dangerouslySetInnerHTML={{ __html: stripScripts(post.excerpt) }}
                   />
 
-                  <Link href={`/blog/${post.slug}`} className="flex items-center gap-2 text-primary font-bold text-sm group-link">
+                  <Link href={`/blog/${post.slug}`} prefetch={false} className="flex items-center gap-2 text-primary font-bold text-sm group-link">
                     Read Story <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                   </Link>
                 </div>

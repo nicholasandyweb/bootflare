@@ -116,7 +116,7 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
           <p className="text-slate-500 text-lg font-light mb-8 max-w-md mx-auto">
             We couldn't reach the WordPress server in time. Please try refreshing the page in a few moments.
           </p>
-          <Link href="/blog" prefetch={true} className="btn-premium">
+          <Link href="/blog" prefetch={false} className="btn-premium">
             Back to Insights
           </Link>
         </div>
@@ -129,7 +129,7 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
       <div className="bg-slate-50 min-h-screen pt-32 pb-20">
         <div className="container text-center py-32 bg-white rounded-[3rem] border border-dashed border-slate-200">
           <p className="text-slate-400 text-xl font-light">Post not found.</p>
-          <Link href="/blog" prefetch={true} className="text-primary font-bold mt-4 inline-block hover:underline">
+          <Link href="/blog" prefetch={false} className="text-primary font-bold mt-4 inline-block hover:underline">
             Back to Insights
           </Link>
         </div>
@@ -145,7 +145,7 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
   return (
     <article className="bg-white min-h-screen pb-20" suppressHydrationWarning>
       <div className="container pt-20 pb-16">
-        <Link href="/blog" prefetch={true} className="inline-flex items-center gap-2 text-slate-500 hover:text-primary transition-colors font-bold mb-12 group">
+        <Link href="/blog" prefetch={false} className="inline-flex items-center gap-2 text-slate-500 hover:text-primary transition-colors font-bold mb-12 group">
           <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" /> Back to Insights
         </Link>
 
@@ -153,7 +153,7 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
           {/* Meta */}
           <div className="flex flex-wrap items-center gap-4 mb-8">
             {categories.map(cat => (
-              <Link key={cat.slug} href={`/category/${cat.slug}`} prefetch={true} className="text-[10px] font-bold text-primary uppercase tracking-widest px-3 py-1 bg-primary/10 rounded-full hover:bg-primary hover:text-white transition-all">
+              <Link key={cat.slug} href={`/category/${cat.slug}`} prefetch={false} className="text-[10px] font-bold text-primary uppercase tracking-widest px-3 py-1 bg-primary/10 rounded-full hover:bg-primary hover:text-white transition-all">
                 {cat.name}
               </Link>
             ))}
