@@ -42,7 +42,12 @@ const BAD_BOT_PATTERNS = [
     'scrapy', 'httpclient', 'zgrab', 'masscan', 'sqlmap', 'nikto',
     'nmap', 'dirbuster', 'gobuster', 'nuclei', 'curl/', 'wget/',
     'libwww', 'lwp-trivial', 'java/', 'okhttp', 'headlesschrome',
-    'phantomjs', 'cfscrape', 'petalbot',
+    'phantomjs', 'cfscrape', 'petalbot', 'bytespider', 'claudebot',
+    'gptbot', 'chatgpt-user', 'ccbot', 'anthropic-ai', 'facebookexternal',
+    'bingpreview', 'yandexbot', 'baiduspider', 'sogou', 'exabot',
+    'seznambot', 'dataforseo', 'rogerbot', 'applebot',
+    'commoncrawl', 'archive.org_bot', 'ia_archiver',
+    'centurybot', 'webdatastats', 'proximic', 'adsbot',
 ];
 
 // Paths that are commonly probed by bots (return 403 immediately)
@@ -50,7 +55,13 @@ const HONEYPOT_PATHS = [
     '/wp-login.php', '/wp-signup.php', '/xmlrpc.php',
     '/.env', '/.git', '/config.php', '/admin.php',
     '/phpmyadmin', '/pma', '/mysql', '/debug',
+    '/.well-known/security.txt', '/backup', '/db',
+    '/wp-config', '/readme.html', '/license.txt',
 ];
+
+// ── Concurrency limiter (per-isolate, not global, but still helps) ──────
+let inFlightToNextJs = 0;
+const MAX_CONCURRENT_NEXTJS = 50; // Max in-flight requests to Next.js per isolate
 
 /**
  * Returns true if the request looks like a bad bot.
@@ -67,10 +78,47 @@ function isSuspiciousRequest(request) {
     return false;
 }
 
+/**
+ * Wraps a promise with a timeout. Rejects if the promise doesn't
+ * resolve within `ms` milliseconds.
+ */
+function withTimeout(promise, ms) {
+    return new Promise((resolve, reject) => {
+        const timer = setTimeout(() => reject(new Error('TIMEOUT')), ms);
+        promise.then(
+            (val) => { clearTimeout(timer); resolve(val); },
+            (err) => { clearTimeout(timer); reject(err); }
+        );
+    });
+}
+
+/** Minimal HTML error page served when Next.js is overloaded or timing out */
+const OVERLOADED_HTML = `<!DOCTYPE html><html><head><meta charset="utf-8">
+<title>bootflare.com</title>
+<meta http-equiv="refresh" content="5">
+<style>body{font-family:system-ui;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;background:#f8f9fa}
+.c{text-align:center;max-width:420px}.s{animation:spin 1s linear infinite;width:32px;height:32px;border:3px solid #e2e8f0;border-top-color:#3b82f6;border-radius:50%;margin:0 auto 16px}
+@keyframes spin{to{transform:rotate(360deg)}}</style></head>
+<body><div class="c"><div class="s"></div><h2>Loading&hellip;</h2><p>The page is warming up. It will auto-retry in a few seconds.</p></div></body></html>`;
+
 export default {
     async fetch(request, env, ctx) {
         const url = new URL(request.url);
         const { pathname } = url;
+
+        // ── Debug endpoint — visit bootflare.com/__debug to diagnose ─
+        if (pathname === '/__debug') {
+            return new Response(JSON.stringify({
+                router: 'active',
+                hasServiceBinding: !!env.NEXTJS_WORKER,
+                hasOriginUrl: !!env.ORIGIN_URL,
+                host: request.headers.get('Host'),
+                pathname,
+                url: request.url,
+            }, null, 2), {
+                headers: { 'Content-Type': 'application/json' }
+            });
+        }
 
         // ── Block honeypot paths immediately ─────────────────────────
         if (HONEYPOT_PATHS.some(p => pathname === p || pathname.startsWith(p + '/'))) {
@@ -168,6 +216,19 @@ export default {
             return new Response('Worker Configuration Error: NEXTJS_WORKER binding is missing.', { status: 500 });
         }
 
+        // ── Concurrency gate — shed load before overwhelming Next.js / WP ──
+        if (inFlightToNextJs >= MAX_CONCURRENT_NEXTJS) {
+            // Too many in-flight SSR requests; return a friendly auto-retry page
+            return new Response(OVERLOADED_HTML, {
+                status: 503,
+                headers: {
+                    'Content-Type': 'text/html;charset=UTF-8',
+                    'Retry-After': '5',
+                    'Cache-Control': 'no-store',
+                },
+            });
+        }
+
         // --- Cache Logic ---
         const cache = caches.default;
         const isCacheableMethod = ['GET', 'HEAD'].includes(request.method);
@@ -195,8 +256,24 @@ export default {
             }
         }
 
-        // Service Binding call: direct worker-to-worker, no HTTP round-trip
-        let response = await nextjsWorker.fetch(request);
+        // Service Binding call with timeout — don't let the request hang forever
+        inFlightToNextJs++;
+        let response;
+        try {
+            response = await withTimeout(nextjsWorker.fetch(request), 15000); // 15s max
+        } catch (err) {
+            inFlightToNextJs--;
+            console.error('Next.js Worker timeout or error:', err.message);
+            return new Response(OVERLOADED_HTML, {
+                status: 503,
+                headers: {
+                    'Content-Type': 'text/html;charset=UTF-8',
+                    'Retry-After': '5',
+                    'Cache-Control': 'no-store',
+                },
+            });
+        }
+        inFlightToNextJs--;
 
         // Store in cache if status is OK and it's a cacheable method
         if (useCache && response.ok) {

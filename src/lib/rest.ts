@@ -3,9 +3,9 @@ const WP_URL = process.env.NEXT_PUBLIC_WORDPRESS_URL || 'https://bootflare.com';
 // Development-only in-memory cache to prevent "minutes of loading" during local testing
 const devCache = new Map<string, { data: any; timestamp: number }>();
 const CACHE_TTL = 10 * 60 * 1000; // 10 minutes
-const FETCH_TIMEOUT = 15000; // Reduced to 15s for better responsiveness
+const FETCH_TIMEOUT = 5000; // 5s — fail fast, serve fallback instead of hanging
 
-export async function fetchREST(endpoint: string, retries = 2, namespace = 'wp/v2') {
+export async function fetchREST(endpoint: string, retries = 1, namespace = 'wp/v2') {
     const separator = endpoint.includes('?') ? '&' : '?';
     const embedParam = endpoint.includes('_embed') ? '' : `${separator}_embed`;
     const baseUrl = endpoint.startsWith('http') ? endpoint : `${WP_URL}/wp-json/${namespace}/${endpoint}${embedParam}`;
@@ -38,8 +38,8 @@ export async function fetchREST(endpoint: string, retries = 2, namespace = 'wp/v
             }
 
             if (res.status === 429 || res.status === 503 || res.status === 502) {
-                // Rate limited or server error, wait and retry
-                const waitTime = Math.min(Math.pow(2, i) * 3000, 60000); // Max 60s
+                // Rate limited or server error, wait briefly and retry
+                const waitTime = Math.min(Math.pow(2, i) * 1000, 5000); // Max 5s
                 console.warn(`Retry ${i + 1}/${retries} for ${url} after ${waitTime}ms (Status: ${res.status})`);
                 await new Promise(resolve => setTimeout(resolve, waitTime));
                 continue;
@@ -132,7 +132,7 @@ export async function fetchREST(endpoint: string, retries = 2, namespace = 'wp/v
     return null;
 }
 
-export async function fetchRESTWithMeta(endpoint: string, retries = 2, namespace = 'wp/v2') {
+export async function fetchRESTWithMeta(endpoint: string, retries = 1, namespace = 'wp/v2') {
     const separator = endpoint.includes('?') ? '&' : '?';
     const embedParam = endpoint.includes('_embed') ? '' : `${separator}_embed`;
     const baseUrl = endpoint.startsWith('http') ? endpoint : `${WP_URL}/wp-json/${namespace}/${endpoint}${embedParam}`;
@@ -165,8 +165,8 @@ export async function fetchRESTWithMeta(endpoint: string, retries = 2, namespace
             }
 
             if (res.status === 429 || res.status === 503 || res.status === 502) {
-                // Rate limited or server error, wait and retry
-                const waitTime = Math.min(Math.pow(2, i) * 3000, 60000); // Max 60s
+                // Rate limited or server error, wait briefly and retry
+                const waitTime = Math.min(Math.pow(2, i) * 1000, 5000); // Max 5s
                 console.warn(`Retry ${i + 1}/${retries} for ${url} after ${waitTime}ms (Status: ${res.status})`);
                 await new Promise(resolve => setTimeout(resolve, waitTime));
                 continue;

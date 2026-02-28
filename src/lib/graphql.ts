@@ -13,10 +13,12 @@ export const client = new GraphQLClient(endpoint, {
   },
 });
 
+const FETCH_TIMEOUT = 5000; // 5s — fail fast, serve fallback instead of hanging
+
 async function _doFetch(query: string, variablesJson: string, retries: number): Promise<unknown> {
   for (let i = 0; i < retries; i++) {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
+    const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT);
 
     try {
       const res = await fetch(endpoint, {
@@ -32,8 +34,8 @@ async function _doFetch(query: string, variablesJson: string, retries: number): 
       clearTimeout(timeoutId);
 
       if (res.status === 429 || res.status === 503 || res.status === 502 || res.status === 504 || res.status === 500) {
-        // Rate limited or server error, wait and retry
-        const waitTime = Math.min(Math.pow(2, i) * 3000, 60000); // Max 60s
+        // Rate limited or server error, wait briefly and retry
+        const waitTime = Math.min(Math.pow(2, i) * 1000, 5000); // Max 5s
         console.warn(`Retry ${i + 1}/${retries} for GraphQL after ${waitTime}ms (Status: ${res.status})`);
         await new Promise(resolve => setTimeout(resolve, waitTime));
         continue;
@@ -87,7 +89,7 @@ async function _doFetch(query: string, variablesJson: string, retries: number): 
         console.error(`Error fetching from GraphQL API (Attempt ${i + 1}/${retries}):`, error);
         return null;
       }
-      const waitTime = Math.pow(2, i) * 2000;
+      const waitTime = Math.pow(2, i) * 1000;
       console.warn(`Retry ${i + 1}/${retries} for GraphQL after ${waitTime}ms due to network error: ${error instanceof Error ? error.message : String(error)}`);
       await new Promise(resolve => setTimeout(resolve, waitTime));
     }
@@ -106,7 +108,7 @@ const _cachedFetch = unstable_cache(
   { revalidate: 3600, tags: ['graphql'] }
 );
 
-export async function fetchGraphQL<T>(query: string, variables?: Record<string, unknown>, retries = 2): Promise<T> {
+export async function fetchGraphQL<T>(query: string, variables?: Record<string, unknown>, retries = 1): Promise<T> {
   const variablesJson = variables ? JSON.stringify(variables) : '';
   const cacheKey = query + variablesJson;
 
