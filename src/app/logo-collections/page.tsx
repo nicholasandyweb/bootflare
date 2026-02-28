@@ -76,7 +76,14 @@ export default async function LogoCollectionsArchive() {
                 fetchREST('logo-collection?per_page=100&hide_empty=true&_fields=id,name,slug,count'),
                 fetchREST('taxonomies/logo-collection?_fields=name,description')
             ]);
-            if (results[0].status === 'fulfilled') collections = results[0].value as LogoCollection[];
+            if (results[0].status === 'fulfilled') {
+                const value = results[0].value;
+                if (Array.isArray(value)) {
+                    collections = value as LogoCollection[];
+                } else {
+                    collections = [];
+                }
+            }
             if (results[1].status === 'fulfilled') taxonomyMeta = results[1].value;
         } catch (e) {
             console.error('Final REST fallback failed:', e);
@@ -92,7 +99,8 @@ export default async function LogoCollectionsArchive() {
     const pageTitle = 'Logo Collections';
 
     // Ensure we only show collections that actually contain logos and are unique by name/ID
-    const uniqueCollections = Array.from(new Map(collections.map(col => [col.id, col])).values());
+    const safeCollections = Array.isArray(collections) ? collections : [];
+    const uniqueCollections = Array.from(new Map(safeCollections.map(col => [col.id, col])).values());
     const activeCollections = uniqueCollections.filter(col => col.count > 0);
 
     return (
