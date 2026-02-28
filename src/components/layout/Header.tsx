@@ -141,7 +141,7 @@ const Header = () => {
                                 </Link>
                                 <Link
                                     href="/royalty-free-music"
-                                    className="font-semibold text-slate-700 text-base border-b border-pink-100 pb-2"
+                                    className="font-semibold text-slate-700 text-base pb-2"
                                     onClick={() => setIsMenuOpen(false)}
                                 >
                                     Royalty Free Music
@@ -183,7 +183,7 @@ const Header = () => {
                                 </Link>
                                 <Link
                                     href="/category/web-design"
-                                    className="font-semibold text-slate-700 text-base border-b border-pink-100 pb-2"
+                                    className="font-semibold text-slate-700 text-base pb-2"
                                     onClick={() => setIsMenuOpen(false)}
                                 >
                                     Web Design
@@ -192,7 +192,7 @@ const Header = () => {
                         )}
                         <Link
                             href="/faq"
-                            className="font-semibold text-slate-700 text-lg border-b border-pink-100 pb-3"
+                            className="font-semibold text-slate-700 text-lg pb-3"
                             onClick={() => setIsMenuOpen(false)}
                         >
                             FAQ
