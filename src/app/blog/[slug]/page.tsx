@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { Metadata } from 'next';
 import { fetchRankMathSEO, mapRankMathToMetadata, mapWPToMetadata } from '@/lib/seo';
 import { cache } from 'react';
+import CommentForm from '@/components/CommentForm';
 
 export const dynamicParams = true;
 export const dynamic = 'force-dynamic';
@@ -14,6 +15,7 @@ const GET_POST_BY_SLUG = `
   query GetPostBySlug($slug: ID!) {
     post(id: $slug, idType: SLUG) {
       id
+      databaseId
       title
       content
       excerpt
@@ -74,6 +76,7 @@ interface GQLComment {
 
 interface GQLPost {
   id: string;
+  databaseId: number;
   title: string;
   content: string;
   excerpt: string;
@@ -261,14 +264,14 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
           </div>
 
           {/* Comments Section */}
-          <CommentsSection comments={post.comments?.nodes || []} />
+          <CommentsSection comments={post.comments?.nodes || []} postId={post.databaseId} /> />
         </div>
       </div>
     </article>
   );
 }
 
-function CommentsSection({ comments }: { comments: GQLComment[] }) {
+function CommentsSection({ comments, postId }: { comments: GQLComment[]; postId: number }) {
   // Build a tree structure for nested comments
   const rootComments = comments.filter(c => !c.parentId);
   const childComments = comments.filter(c => c.parentId);
@@ -286,6 +289,7 @@ function CommentsSection({ comments }: { comments: GQLComment[] }) {
         <p className="text-slate-500 text-center py-12 bg-slate-50 rounded-2xl">
           No comments yet. Be the first to share your thoughts!
         </p>
+        <CommentForm postId={postId.toString()} />
       </div>
     );
   }
@@ -301,6 +305,7 @@ function CommentsSection({ comments }: { comments: GQLComment[] }) {
           <CommentItem key={comment.id} comment={comment} replies={getChildComments(comment.id)} getChildComments={getChildComments} />
         ))}
       </div>
+      <CommentForm postId={postId.toString()} />
     </div>
   );
 }
