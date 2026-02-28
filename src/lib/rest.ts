@@ -1,9 +1,14 @@
 const WP_URL = process.env.NEXT_PUBLIC_WORDPRESS_URL || 'https://bootflare.com';
 
+// When hitting origin-wp.bootflare.com directly (bypassing router), WordPress
+// needs the real Host header to route the request correctly.
+const isDirectOrigin = WP_URL.includes('origin-wp.');
+const wpHostHeader = isDirectOrigin ? 'bootflare.com' : undefined;
+
 // Development-only in-memory cache to prevent "minutes of loading" during local testing
 const devCache = new Map<string, { data: any; timestamp: number }>();
 const CACHE_TTL = 10 * 60 * 1000; // 10 minutes
-const FETCH_TIMEOUT = 5000; // 5s — fail fast, serve fallback instead of hanging
+const FETCH_TIMEOUT = 8000; // 8s — enough for direct origin, fail fast for fallback
 
 export async function fetchREST(endpoint: string, retries = 1, namespace = 'wp/v2') {
     const separator = endpoint.includes('?') ? '&' : '?';
@@ -27,7 +32,8 @@ export async function fetchREST(endpoint: string, retries = 1, namespace = 'wp/v
             const res = await fetch(url, {
                 headers: {
                     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                    'Accept': 'application/json'
+                    'Accept': 'application/json',
+                    ...(wpHostHeader ? { 'Host': wpHostHeader } : {}),
                 },
                 cache: 'force-cache',
                 next: { revalidate: 3600 }, // Cache on edge for 1 hour
@@ -154,7 +160,8 @@ export async function fetchRESTWithMeta(endpoint: string, retries = 1, namespace
             const res = await fetch(url, {
                 headers: {
                     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                    'Accept': 'application/json'
+                    'Accept': 'application/json',
+                    ...(wpHostHeader ? { 'Host': wpHostHeader } : {}),
                 },
                 cache: 'force-cache',
                 next: { revalidate: 3600 }, // Cache on edge for 1 hour

@@ -6,14 +6,20 @@ const endpoint = process.env.WORDPRESS_GRAPHQL_ENDPOINT || WP_GRAPHQL_URL;
 const devCache = new Map<string, { data: any; timestamp: number }>();
 const CACHE_TTL = 10 * 60 * 1000; // 10 minutes
 
+// When hitting origin-wp.bootflare.com directly (bypassing router), WordPress
+// needs the real Host header to route the request correctly.
+const isDirectOrigin = endpoint.includes('origin-wp.');
+const wpHostHeader = isDirectOrigin ? 'bootflare.com' : undefined;
+
 export const client = new GraphQLClient(endpoint, {
   headers: {
     'Content-Type': 'application/json',
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    ...(wpHostHeader ? { 'Host': wpHostHeader } : {}),
   },
 });
 
-const FETCH_TIMEOUT = 5000; // 5s — fail fast, serve fallback instead of hanging
+const FETCH_TIMEOUT = 8000; // 8s — enough for direct origin, fail fast for fallback
 
 async function _doFetch(query: string, variablesJson: string, retries: number): Promise<unknown> {
   for (let i = 0; i < retries; i++) {
@@ -27,6 +33,7 @@ async function _doFetch(query: string, variablesJson: string, retries: number): 
           'Content-Type': 'application/json',
           'Accept': 'application/json',
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          ...(wpHostHeader ? { 'Host': wpHostHeader } : {}),
         },
         body: JSON.stringify({ query, variables: variablesJson ? JSON.parse(variablesJson) : undefined }),
         signal: controller.signal

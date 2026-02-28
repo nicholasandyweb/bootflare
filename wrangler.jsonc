@@ -16,5 +16,12 @@
             "binding": "WORKER_SELF_REFERENCE",
             "service": "bootflare"
         }
-    ]
+    ],
+    // Direct origin URL for WordPress API — bypasses the router Worker entirely
+    // so SSR fetches don't loop: Next.js → Router → WP (slow double-hop)
+    // Instead: Next.js → origin-wp.bootflare.com → WP (direct)
+    "vars": {
+        "WORDPRESS_GRAPHQL_ENDPOINT": "https://origin-wp.bootflare.com/graphql",
+        "NEXT_PUBLIC_WORDPRESS_URL": "https://origin-wp.bootflare.com"
+    }
 }
