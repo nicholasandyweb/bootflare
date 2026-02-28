@@ -34,10 +34,58 @@ const WP_PATHS = [
     '/robots.txt',
 ];
 
+// ── Bot / abuse detection ────────────────────────────────────────────────
+// Known bad bot User-Agent substrings (case-insensitive match)
+const BAD_BOT_PATTERNS = [
+    'ahrefsbot', 'semrushbot', 'dotbot', 'mj12bot', 'blexbot',
+    'seekport', 'megaindex', 'ltx71', 'go-http-client', 'python-requests',
+    'scrapy', 'httpclient', 'zgrab', 'masscan', 'sqlmap', 'nikto',
+    'nmap', 'dirbuster', 'gobuster', 'nuclei', 'curl/', 'wget/',
+    'libwww', 'lwp-trivial', 'java/', 'okhttp', 'headlesschrome',
+    'phantomjs', 'cfscrape', 'petalbot',
+];
+
+// Paths that are commonly probed by bots (return 403 immediately)
+const HONEYPOT_PATHS = [
+    '/wp-login.php', '/wp-signup.php', '/xmlrpc.php',
+    '/.env', '/.git', '/config.php', '/admin.php',
+    '/phpmyadmin', '/pma', '/mysql', '/debug',
+];
+
+/**
+ * Returns true if the request looks like a bad bot.
+ */
+function isSuspiciousRequest(request) {
+    const ua = (request.headers.get('User-Agent') || '').toLowerCase();
+
+    // No User-Agent at all — almost always a bot/scanner
+    if (!ua) return true;
+
+    // Known bad bots
+    if (BAD_BOT_PATTERNS.some(p => ua.includes(p))) return true;
+
+    return false;
+}
+
 export default {
     async fetch(request, env, ctx) {
         const url = new URL(request.url);
         const { pathname } = url;
+
+        // ── Block honeypot paths immediately ─────────────────────────
+        if (HONEYPOT_PATHS.some(p => pathname === p || pathname.startsWith(p + '/'))) {
+            // Allow wp-login/wp-signup only if referer is from bootflare (real admin)
+            const referer = request.headers.get('Referer') || '';
+            if (!referer.includes('bootflare.com')) {
+                return new Response('Forbidden', { status: 403 });
+            }
+        }
+
+        // ── Block obvious bad bots ───────────────────────────────────
+        if (isSuspiciousRequest(request)) {
+            // Return a minimal 403 — costs essentially zero CPU
+            return new Response('Forbidden', { status: 403 });
+        }
 
         // Check if this is a WordPress path
         const isWordPressPath = WP_PATHS.some(
@@ -122,15 +170,9 @@ export default {
 
         // --- Cache Logic ---
         const cache = caches.default;
-        // Only cache GET and HEAD requests
         const isCacheableMethod = ['GET', 'HEAD'].includes(request.method);
 
-        // Normalize Request for better cache hits (RSC vs Prefetch)
-        const isRSC = request.headers.has('RSC') || request.headers.has('Next-Router-Prefetch') || request.headers.has('Next-Router-State-Tree');
-
-        // Create a stable cache key
         let cacheUrl = new URL(request.url);
-
         let cacheKey;
         try {
             cacheKey = new Request(cacheUrl.toString(), {
@@ -158,9 +200,6 @@ export default {
 
         // Store in cache if status is OK and it's a cacheable method
         if (useCache && response.ok) {
-            // We use standard s-maxage for edge caching, but we don't
-            // override Vary or Force immutable here anymore to avoid 
-            // breaking Next.js hydration and streaming.
             const responseToCache = new Response(response.body, response);
             responseToCache.headers.set('Cache-Control', 'public, s-maxage=3600');
 
