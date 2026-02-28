@@ -7,6 +7,7 @@ import { Menu, X, ChevronDown } from 'lucide-react';
 
 const Header = () => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [isDownloadsOpen, setIsDownloadsOpen] = useState(false);
 
     return (
         <header className="fixed top-0 left-0 w-full z-50 bg-white py-4 border-b border-slate-100">
@@ -52,7 +53,13 @@ const Header = () => {
 
                 <button
                     className="lg:hidden p-2 text-slate-600 hover:text-primary transition-colors"
-                    onClick={() => setIsMenuOpen(!isMenuOpen)}
+                    onClick={() => {
+                        const next = !isMenuOpen;
+                        setIsMenuOpen(next);
+                        if (!next) {
+                            setIsDownloadsOpen(false);
+                        }
+                    }}
                 >
                     {isMenuOpen ? <X className="w-7 h-7" /> : <Menu className="w-7 h-7" />}
                 </button>
@@ -62,8 +69,34 @@ const Header = () => {
             {isMenuOpen && (
                 <div className="lg:hidden absolute top-full left-0 w-full bg-white border-b border-slate-100 p-6 flex flex-col gap-4 animate-in slide-in-from-top duration-300">
                     <Link href="/" className="font-bold text-primary text-lg" onClick={() => setIsMenuOpen(false)}>Home</Link>
-                    <Link href="/free-brand-logos" className="font-semibold text-slate-700 text-lg" onClick={() => setIsMenuOpen(false)}>Free Brand Logos</Link>
-                    <Link href="/royalty-free-music" className="font-semibold text-slate-700 text-lg" onClick={() => setIsMenuOpen(false)}>Royalty Free Music</Link>
+                    <button
+                        type="button"
+                        className="flex items-center justify-between text-left font-semibold text-slate-700 text-lg"
+                        onClick={() => setIsDownloadsOpen((prev) => !prev)}
+                    >
+                        <span>Downloads</span>
+                        <ChevronDown
+                            className={`w-5 h-5 transition-transform ${isDownloadsOpen ? 'rotate-180 text-primary' : ''}`}
+                        />
+                    </button>
+                    {isDownloadsOpen && (
+                        <div className="ml-3 flex flex-col gap-3">
+                            <Link
+                                href="/free-brand-logos"
+                                className="font-semibold text-slate-700 text-base"
+                                onClick={() => setIsMenuOpen(false)}
+                            >
+                                Free Brand Logos
+                            </Link>
+                            <Link
+                                href="/royalty-free-music"
+                                className="font-semibold text-slate-700 text-base"
+                                onClick={() => setIsMenuOpen(false)}
+                            >
+                                Royalty Free Music
+                            </Link>
+                        </div>
+                    )}
                     <Link href="/blog" className="font-semibold text-slate-700 text-lg" onClick={() => setIsMenuOpen(false)}>Blog</Link>
                     <Link href="/faq" className="font-semibold text-slate-700 text-lg" onClick={() => setIsMenuOpen(false)}>FAQ</Link>
                 </div>
