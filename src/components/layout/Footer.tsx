@@ -77,7 +77,7 @@ const Footer = () => {
 function FooterLink({ href, children }: { href: string; children: React.ReactNode }) {
     return (
         <li>
-            <Link href={href} prefetch={false} className="text-slate-800 hover:text-primary transition-colors duration-200 flex items-center gap-2 group font-medium">
+            <Link href={href} className="text-slate-800 hover:text-primary transition-colors duration-200 flex items-center gap-2 group font-medium">
                 {children}
             </Link>
         </li>
