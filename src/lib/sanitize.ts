@@ -8,34 +8,21 @@ export function stripScripts(html: string | undefined): string {
 }
 
 /**
- * Rewrites internal WordPress post links in blog content so that links like
- * https://bootflare.com/some-post/ or /some-post/ become /blog/some-post.
+ * Converts absolute bootflare.com links in article HTML to relative paths.
+ * This ensures "See Also" and other in-content links navigate via Next.js
+ * client-side routing (handled by the ArticleContent component) instead of
+ * making full HTTP requests to the WordPress origin.
  *
- * This fixes in-article "See also" style links that would otherwise point to
- * non-existent root-level routes in the Next.js app.
+ * Example: href="https://bootflare.com/my-post/" → href="/my-post/"
  */
-export function rewriteBlogInternalLinks(html: string | undefined): string {
+export function internalizeLinks(html: string | undefined): string {
     if (!html) return "";
 
-    let output = html;
-
-    // Absolute links: https://bootflare.com/some-post[/...]
-    const absolutePattern = /href="https?:\/\/bootflare\.com\/(?:www\.)?([^"?#\/]+)\/?([^\"]*)"/gi;
-    output = output.replace(absolutePattern, (match, slug, rest) => {
-        if (!slug) return match;
-        const suffix = rest || "";
-        return `href="/blog/${slug}${suffix}"`;
-    });
-
-    // Root-relative links: /some-post[/...]
-    const relativePattern = /href="\/([^"?#\/]+)\/?([^\"]*)"/gi;
-    output = output.replace(relativePattern, (match, slug, rest) => {
-        if (!slug) return match;
-        const suffix = rest || "";
-        return `href="/blog/${slug}${suffix}"`;
-    });
-
-    return output;
+    // Convert absolute bootflare.com URLs to relative paths
+    return html.replace(
+        /href="https?:\/\/(?:www\.)?bootflare\.com\//gi,
+        'href="/'
+    );
 }
 
 /**
