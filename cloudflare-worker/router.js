@@ -66,13 +66,20 @@ const MAX_CONCURRENT_NEXTJS = 50; // Max in-flight requests to Next.js per isola
 // ── Stats (per-isolate, resets on cold start) ───────────────────────────
 const stats = { apiCacheHit: 0, apiCacheMiss: 0, pageCacheHit: 0, pageCacheMiss: 0, botBlocked: 0, totalRequests: 0 };
 
-const ROUTER_VERSION = '2026-03-01-wp-origin-url';
+const ROUTER_VERSION = '2026-03-01-no-html-cache';
 
 const DEFAULT_WP_RESOLVE_OVERRIDE = 'origin-wp.bootflare.com';
 
 function clampSnippet(text, max = 300) {
     if (!text) return '';
     return text.length > max ? text.slice(0, max) + '…' : text;
+}
+
+function isStaticAssetPath(pathname) {
+    if (!pathname) return false;
+    if (pathname.startsWith('/_next/')) return true;
+    // Common static file extensions (avoid caching HTML documents)
+    return /\.(?:js|css|map|png|jpe?g|gif|webp|svg|ico|txt|xml|woff2?|ttf|eot)$/.test(pathname);
 }
 
 function getOriginUrlHost(env) {
@@ -417,7 +424,8 @@ export default {
             cacheKey = new Request(request.url, { method: 'GET' });
         }
 
-        const useCache = isCacheableMethod && !url.searchParams.has('nocache');
+        // Only cache static assets. Caching HTML can "stick" fallback SSR for a long time.
+        const useCache = isCacheableMethod && isStaticAssetPath(pathname) && !url.searchParams.has('nocache');
 
         if (useCache) {
             const cachedResponse = await cache.match(cacheKey);

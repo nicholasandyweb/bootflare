@@ -30,8 +30,9 @@ export async function fetchREST(endpoint: string, retries = 1, namespace = 'wp/v
                     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                     'Accept': 'application/json',
                 },
-                cache: 'force-cache',
-                next: { revalidate: 3600 }, // Cache on edge for 1 hour
+                // Avoid Next.js fetch cache poisoning (e.g. previously cached HTML/404 during origin misrouting)
+                // The router already caches REST JSON responses at the edge.
+                cache: 'no-store',
                 signal: controller.signal
             });
             if (res.status === 504 || res.status === 524) {
@@ -157,8 +158,9 @@ export async function fetchRESTWithMeta(endpoint: string, retries = 1, namespace
                     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                     'Accept': 'application/json',
                 },
-                cache: 'force-cache',
-                next: { revalidate: 3600 }, // Cache on edge for 1 hour
+                // Avoid Next.js fetch cache poisoning (e.g. previously cached HTML/404 during origin misrouting)
+                // The router already caches REST JSON responses at the edge.
+                cache: 'no-store',
                 signal: controller.signal
             });
             if (res.status === 504 || res.status === 524) {
