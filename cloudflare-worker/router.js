@@ -66,7 +66,7 @@ const MAX_CONCURRENT_NEXTJS = 50; // Max in-flight requests to Next.js per isola
 // ── Stats (per-isolate, resets on cold start) ───────────────────────────
 const stats = { apiCacheHit: 0, apiCacheMiss: 0, pageCacheHit: 0, pageCacheMiss: 0, botBlocked: 0, totalRequests: 0 };
 
-const ROUTER_VERSION = '2026-03-01-no-wpgraphql-probe';
+const ROUTER_VERSION = '2026-03-01-cache-bypass-fix';
 
 const DEFAULT_WP_RESOLVE_OVERRIDE = 'origin-wp.bootflare.com';
 
