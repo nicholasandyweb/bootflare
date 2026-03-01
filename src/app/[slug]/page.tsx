@@ -40,13 +40,12 @@ interface RESTPost {
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
   try {
-    const post = await getRESTPostBySlug(slug) as RESTPost;
-    if (post) {
-      const seo = await fetchRankMathSEO(`https://bootflare.com/${slug}/`);
-      if (seo) return mapRankMathToMetadata(seo);
-
-      return mapWPToMetadata(post as any, 'Blog | Bootflare');
-    }
+    const [post, seo] = await Promise.all([
+      getRESTPostBySlug(slug) as Promise<RESTPost | null>,
+      fetchRankMathSEO(`https://bootflare.com/${slug}/`),
+    ]);
+    if (seo) return mapRankMathToMetadata(seo);
+    if (post) return mapWPToMetadata(post as any, 'Blog | Bootflare');
   } catch (error) {
     console.error('Error generating metadata for blog post:', error);
   }

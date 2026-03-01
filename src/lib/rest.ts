@@ -3,7 +3,7 @@ const WP_URL = 'https://bootflare.com';
 // Development-only in-memory cache to prevent "minutes of loading" during local testing
 const devCache = new Map<string, { data: any; timestamp: number }>();
 const CACHE_TTL = 10 * 60 * 1000; // 10 minutes
-// 5s timeout — short enough that 2 retries (5+1+5 = 11s) stay safely under the 30s router limit.
+// 5s timeout — one attempt (5s) keeps sequential call pairs well under the 30s router limit.
 const FETCH_TIMEOUT = 5000;
 
 function findJsonBounds(text: string): { start: number; end: number } | null {
@@ -62,10 +62,7 @@ async function _doFetchREST(url: string, retries: number): Promise<any> {
             }
 
             if (res.status === 429 || res.status === 503 || res.status === 502) {
-                // Don't waste time waiting on the last attempt.
                 if (i === retries - 1) return null;
-                const waitTime = Math.min(Math.pow(2, i) * 1000, 5000);
-                await new Promise(resolve => setTimeout(resolve, waitTime));
                 continue;
             }
 
@@ -97,14 +94,12 @@ async function _doFetchREST(url: string, retries: number): Promise<any> {
         } catch (error) {
             clearTimeout(timeoutId);
             if (i === retries - 1) return null;
-            const waitTime = Math.pow(2, i) * 1000;
-            await new Promise(resolve => setTimeout(resolve, waitTime));
         }
     }
     return null;
 }
 
-export async function fetchREST(endpoint: string, retries = 2, namespace = 'wp/v2') {
+export async function fetchREST(endpoint: string, retries = 1, namespace = 'wp/v2') {
     const separator = endpoint.includes('?') ? '&' : '?';
     const embedParam = endpoint.includes('_embed') ? '' : `${separator}_embed`;
     const url = endpoint.startsWith('http') ? endpoint : `${WP_URL}/wp-json/${namespace}/${endpoint}${embedParam}`;
@@ -145,8 +140,6 @@ async function _doFetchRESTWithMeta(url: string, retries: number): Promise<any> 
 
             if (res.status === 429 || res.status === 503 || res.status === 502) {
                 if (i === retries - 1) return null;
-                const waitTime = Math.min(Math.pow(2, i) * 1000, 5000);
-                await new Promise(resolve => setTimeout(resolve, waitTime));
                 continue;
             }
 
@@ -184,14 +177,12 @@ async function _doFetchRESTWithMeta(url: string, retries: number): Promise<any> 
         } catch (error) {
             clearTimeout(timeoutId);
             if (i === retries - 1) return null;
-            const waitTime = Math.pow(2, i) * 1000;
-            await new Promise(resolve => setTimeout(resolve, waitTime));
         }
     }
     return null;
 }
 
-export async function fetchRESTWithMeta(endpoint: string, retries = 2, namespace = 'wp/v2') {
+export async function fetchRESTWithMeta(endpoint: string, retries = 1, namespace = 'wp/v2') {
     const separator = endpoint.includes('?') ? '&' : '?';
     const embedParam = endpoint.includes('_embed') ? '' : `${separator}_embed`;
     const url = endpoint.startsWith('http') ? endpoint : `${WP_URL}/wp-json/${namespace}/${endpoint}${embedParam}`;
