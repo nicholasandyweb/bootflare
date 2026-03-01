@@ -175,8 +175,9 @@ export default {
             // WP JSON probe (direct origin)
             try {
                 const t0 = Date.now();
-                const res = await withTimeout(fetch('https://origin-wp.bootflare.com/wp-json/', {
+                const res = await withTimeout(fetch('https://bootflare.com/wp-json/', {
                     headers: { 'User-Agent': 'bootflare-router-healthcheck' },
+                    cf: { resolveOverride: 'origin-wp.bootflare.com' },
                 }), 12000);
                 const ct = res.headers.get('content-type') || '';
                 const body = await res.text();
@@ -188,7 +189,7 @@ export default {
             // WP GraphQL probe (direct origin)
             try {
                 const t0 = Date.now();
-                const res = await withTimeout(fetch('https://origin-wp.bootflare.com/graphql', {
+                const res = await withTimeout(fetch('https://bootflare.com/graphql', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -196,6 +197,7 @@ export default {
                         'User-Agent': 'bootflare-router-healthcheck',
                     },
                     body: JSON.stringify({ query: 'query{__typename}' }),
+                    cf: { resolveOverride: 'origin-wp.bootflare.com' },
                 }), 12000);
                 const ct = res.headers.get('content-type') || '';
                 const body = await res.text();
@@ -280,16 +282,14 @@ export default {
                 }
             }
 
-            // IMPORTANT: Fetch origin-wp directly to avoid any possibility of worker-route recursion
-            // when this router is bound to bootflare.com/*.
-            const originUrl = new URL(request.url);
-            originUrl.hostname = 'origin-wp.bootflare.com';
-
-            const response = await fetch(originUrl.toString(), {
+            // IMPORTANT: Keep URL host as bootflare.com so TLS/SNI matches your existing cert,
+            // but route DNS to the real origin via resolveOverride.
+            const response = await fetch(request.url, {
                 method: request.method,
                 headers: wpHeaders,
                 body: ['GET', 'HEAD'].includes(request.method) ? null : request.body,
                 redirect: 'manual',
+                cf: { resolveOverride: 'origin-wp.bootflare.com' },
             });
 
             // Cache successful API responses that return actual JSON (not HTML bot challenges)
