@@ -2,6 +2,11 @@ import { Metadata } from 'next';
 
 const WP_URL = process.env.NEXT_PUBLIC_WORDPRESS_URL || 'https://bootflare.com';
 
+// Cloudflare Workers fetch option — bypasses the router worker DNS record so that
+// Next.js SSR SEO fetches go directly to the WP origin without looping through
+// the router. The `cf` key is a CF Workers-only init property; ignored in Node.js dev.
+const WP_CF_OPTIONS = { resolveOverride: 'origin-wp.bootflare.com' };
+
 interface WPPost {
     title?: { rendered: string } | string;
     excerpt?: { rendered: string } | string;
@@ -84,6 +89,8 @@ export async function fetchRankMathSEO(postUrl: string): Promise<RankMathSEO | n
             // The router can cache WP JSON; keep Next fetches dynamic.
             cache: 'no-store',
             signal: controller.signal,
+            // @ts-expect-error cf is a Cloudflare Workers-only fetch option; ignored in Node.js dev
+            cf: WP_CF_OPTIONS,
         });
         if (!res.ok) return null;
 
