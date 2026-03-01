@@ -66,7 +66,7 @@ const MAX_CONCURRENT_NEXTJS = 50; // Max in-flight requests to Next.js per isola
 // ── Stats (per-isolate, resets on cold start) ───────────────────────────
 const stats = { apiCacheHit: 0, apiCacheMiss: 0, pageCacheHit: 0, pageCacheMiss: 0, botBlocked: 0, totalRequests: 0 };
 
-const ROUTER_VERSION = '2026-03-01-rss-probe';
+const ROUTER_VERSION = '2026-03-01-endpoint-probe';
 
 // ── WP API cache settings ────────────────────────────────────────────────
 // "Fresh" window: serve from cache without revalidating (2 minutes)
@@ -356,36 +356,28 @@ export default {
                 results.wpJson = { error: e?.message || String(e) };
             }
 
-            // WP posts content probe — tests if actual content endpoints are healthy
-            try {
-                const t0 = Date.now();
-                // No _embed — just IDs and titles to test the DB query speed with minimal overhead
-                const postsUrl = getWpTargetUrl('https://bootflare.com/wp-json/wp/v2/posts?per_page=1&_fields=id,title', env);
-                const res = await withTimeout(fetch(postsUrl, {
-                    headers: { 'User-Agent': 'bootflare-router-healthcheck', 'Accept': 'application/json' },
-                    cf: getWpCfOptions(env),
-                }), 15000);
-                const ct = res.headers.get('content-type') || '';
-                const body = await res.text();
-                results.wpPosts = { url: postsUrl, status: res.status, ms: Date.now() - t0, contentType: ct, snippet: clampSnippet(body, 150) };
-            } catch (e) {
-                results.wpPosts = { error: e?.message || String(e) };
-            }
-
-            // RSS feed probe — tests if LiteSpeed-cached RSS feed is available
-            try {
-                const t0 = Date.now();
-                const rssUrl = getWpTargetUrl('https://bootflare.com/feed/', env);
-                const res = await withTimeout(fetch(rssUrl, {
-                    headers: { 'User-Agent': 'bootflare-router-healthcheck', 'Accept': 'application/rss+xml,text/xml' },
-                    cf: getWpCfOptions(env),
-                }), 10000);
-                const ct = res.headers.get('content-type') || '';
-                const body = await res.text();
-                results.wpRSS = { url: rssUrl, status: res.status, ms: Date.now() - t0, contentType: ct, snippet: clampSnippet(body, 150) };
-            } catch (e) {
-                results.wpRSS = { error: e?.message || String(e) };
-            }
+            // Probe a set of WP REST endpoints to identify which ones are slow/blocked
+            const probeEndpoints = [
+                ['wpPosts', 'https://bootflare.com/wp-json/wp/v2/posts?per_page=1&_fields=id,title'],
+                ['wpPages', 'https://bootflare.com/wp-json/wp/v2/pages?per_page=1&_fields=id,title'],
+                ['wpLogo',  'https://bootflare.com/wp-json/wp/v2/logo?per_page=1&_fields=id,title'],
+                ['wpRSS',   'https://bootflare.com/feed/'],
+            ];
+            await Promise.allSettled(probeEndpoints.map(async ([key, rawUrl]) => {
+                try {
+                    const t0 = Date.now();
+                    const probeUrl = getWpTargetUrl(rawUrl, env);
+                    const res = await withTimeout(fetch(probeUrl, {
+                        headers: { 'User-Agent': 'bootflare-router-healthcheck', 'Accept': 'application/json, text/xml' },
+                        cf: getWpCfOptions(env),
+                    }), 10000);
+                    const ct = res.headers.get('content-type') || '';
+                    const body = await withTimeout(res.text(), 5000);
+                    results[key] = { status: res.status, ms: Date.now() - t0, contentType: ct, snippet: clampSnippet(body, 80) };
+                } catch (e) {
+                    results[key] = { error: e?.message || String(e) };
+                }
+            }));
 
             results.msTotal = Date.now() - started;
 
