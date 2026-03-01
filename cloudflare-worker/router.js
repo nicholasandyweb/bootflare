@@ -66,7 +66,7 @@ const MAX_CONCURRENT_NEXTJS = 50; // Max in-flight requests to Next.js per isola
 // ── Stats (per-isolate, resets on cold start) ───────────────────────────
 const stats = { apiCacheHit: 0, apiCacheMiss: 0, pageCacheHit: 0, pageCacheMiss: 0, botBlocked: 0, totalRequests: 0 };
 
-const ROUTER_VERSION = '2026-03-01-swr-cache';
+const ROUTER_VERSION = '2026-03-01-rss-probe';
 
 // ── WP API cache settings ────────────────────────────────────────────────
 // "Fresh" window: serve from cache without revalidating (2 minutes)
@@ -370,6 +370,21 @@ export default {
                 results.wpPosts = { url: postsUrl, status: res.status, ms: Date.now() - t0, contentType: ct, snippet: clampSnippet(body, 150) };
             } catch (e) {
                 results.wpPosts = { error: e?.message || String(e) };
+            }
+
+            // RSS feed probe — tests if LiteSpeed-cached RSS feed is available
+            try {
+                const t0 = Date.now();
+                const rssUrl = getWpTargetUrl('https://bootflare.com/feed/', env);
+                const res = await withTimeout(fetch(rssUrl, {
+                    headers: { 'User-Agent': 'bootflare-router-healthcheck', 'Accept': 'application/rss+xml,text/xml' },
+                    cf: getWpCfOptions(env),
+                }), 10000);
+                const ct = res.headers.get('content-type') || '';
+                const body = await res.text();
+                results.wpRSS = { url: rssUrl, status: res.status, ms: Date.now() - t0, contentType: ct, snippet: clampSnippet(body, 150) };
+            } catch (e) {
+                results.wpRSS = { error: e?.message || String(e) };
             }
 
             results.msTotal = Date.now() - started;
