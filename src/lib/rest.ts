@@ -1,5 +1,3 @@
-import { unstable_cache } from 'next/cache';
-
 const WP_URL = 'https://bootflare.com';
 
 // Development-only in-memory cache to prevent "minutes of loading" during local testing
@@ -7,6 +5,41 @@ const devCache = new Map<string, { data: any; timestamp: number }>();
 const CACHE_TTL = 10 * 60 * 1000; // 10 minutes
 // 10s timeout — the router caches REST responses (1hr), so most requests are instant cache hits.
 const FETCH_TIMEOUT = 10000;
+
+function findJsonBounds(text: string): { start: number; end: number } | null {
+    if (!text) return null;
+
+    const firstBracket = text.indexOf('[');
+    const firstBrace = text.indexOf('{');
+
+    let start = -1;
+    if (firstBracket !== -1 && firstBrace !== -1) start = Math.min(firstBracket, firstBrace);
+    else start = firstBracket !== -1 ? firstBracket : firstBrace;
+
+    if (start === -1) return null;
+
+    const lastBracket = text.lastIndexOf(']');
+    const lastBrace = text.lastIndexOf('}');
+
+    let end = -1;
+    if (lastBracket !== -1 && lastBrace !== -1) end = Math.max(lastBracket, lastBrace);
+    else end = lastBracket !== -1 ? lastBracket : lastBrace;
+
+    if (end === -1 || end < start) return null;
+    return { start, end };
+}
+
+function looksLikeBotOrHtml(text: string): boolean {
+    if (!text) return false;
+    const t = text.toLowerCase();
+    return (
+        t.includes('<!doctype html') ||
+        t.includes('<html') ||
+        t.includes('imunify360') ||
+        t.includes('bot-protection') ||
+        t.includes('challenge validation')
+    );
+}
 
 async function _doFetchREST(url: string, retries: number): Promise<any> {
     for (let i = 0; i < retries; i++) {
@@ -40,15 +73,19 @@ async function _doFetchREST(url: string, retries: number): Promise<any> {
             }
 
             const text = await res.text();
-            const start = Math.min(text.indexOf('['), text.indexOf('{'));
-            const end = Math.max(text.lastIndexOf(']'), text.lastIndexOf('}'));
 
-            if (start === -1 || end === -1 || end < start) {
+            if (looksLikeBotOrHtml(text)) {
                 if (i === retries - 1) return null;
                 continue;
             }
 
-            const jsonText = text.substring(start, end + 1);
+            const bounds = findJsonBounds(text);
+            if (!bounds) {
+                if (i === retries - 1) return null;
+                continue;
+            }
+
+            const jsonText = text.substring(bounds.start, bounds.end + 1);
             try {
                 return JSON.parse(jsonText);
             } catch (e) {
@@ -65,12 +102,6 @@ async function _doFetchREST(url: string, retries: number): Promise<any> {
     return null;
 }
 
-const _cachedFetchREST = unstable_cache(
-    (url: string, retries: number) => _doFetchREST(url, retries),
-    ['rest-fetch'],
-    { revalidate: 3600, tags: ['rest'] }
-);
-
 export async function fetchREST(endpoint: string, retries = 1, namespace = 'wp/v2') {
     const separator = endpoint.includes('?') ? '&' : '?';
     const embedParam = endpoint.includes('_embed') ? '' : `${separator}_embed`;
@@ -84,7 +115,10 @@ export async function fetchREST(endpoint: string, retries = 1, namespace = 'wp/v
         return result;
     }
 
-    return await _cachedFetchREST(url, retries);
+    // Production: do NOT use Next.js Data Cache here.
+    // The router already caches /wp-json responses at the edge; caching null here
+    // can poison pages with fallback content for an hour.
+    return await _doFetchREST(url, retries);
 }
 
 async function _doFetchRESTWithMeta(url: string, retries: number): Promise<any> {
@@ -103,6 +137,16 @@ async function _doFetchRESTWithMeta(url: string, retries: number): Promise<any> 
             });
             clearTimeout(timeoutId);
 
+            if (res.status === 504 || res.status === 524) {
+                throw new Error(`Gateway timeout (504/524) at ${url}`);
+            }
+
+            if (res.status === 429 || res.status === 503 || res.status === 502) {
+                const waitTime = Math.min(Math.pow(2, i) * 1000, 5000);
+                await new Promise(resolve => setTimeout(resolve, waitTime));
+                continue;
+            }
+
             if (!res.ok) {
                 if (i === retries - 1) return null;
                 continue;
@@ -114,15 +158,19 @@ async function _doFetchRESTWithMeta(url: string, retries: number): Promise<any> 
             const totalItems = totalItemsStr ? parseInt(totalItemsStr, 10) : 0;
 
             const text = await res.text();
-            const start = Math.min(text.indexOf('['), text.indexOf('{'));
-            const end = Math.max(text.lastIndexOf(']'), text.lastIndexOf('}'));
 
-            if (start === -1 || end === -1 || end < start) {
+            if (looksLikeBotOrHtml(text)) {
                 if (i === retries - 1) return null;
                 continue;
             }
 
-            const jsonText = text.substring(start, end + 1);
+            const bounds = findJsonBounds(text);
+            if (!bounds) {
+                if (i === retries - 1) return null;
+                continue;
+            }
+
+            const jsonText = text.substring(bounds.start, bounds.end + 1);
             try {
                 const data = JSON.parse(jsonText);
                 return { data, totalPages, totalItems };
@@ -140,12 +188,6 @@ async function _doFetchRESTWithMeta(url: string, retries: number): Promise<any> 
     return null;
 }
 
-const _cachedFetchRESTWithMeta = unstable_cache(
-    (url: string, retries: number) => _doFetchRESTWithMeta(url, retries),
-    ['rest-fetch-meta'],
-    { revalidate: 3600, tags: ['rest'] }
-);
-
 export async function fetchRESTWithMeta(endpoint: string, retries = 1, namespace = 'wp/v2') {
     const separator = endpoint.includes('?') ? '&' : '?';
     const embedParam = endpoint.includes('_embed') ? '' : `${separator}_embed`;
@@ -159,7 +201,8 @@ export async function fetchRESTWithMeta(endpoint: string, retries = 1, namespace
         return result;
     }
 
-    return await _cachedFetchRESTWithMeta(url, retries);
+    // Production: avoid Next.js Data Cache poisoning.
+    return await _doFetchRESTWithMeta(url, retries);
 }
 
 /**
