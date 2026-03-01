@@ -1,9 +1,8 @@
 export const revalidate = 86400; // 24 hours
-import { fetchGraphQL } from '@/lib/graphql';
+import { fetchREST } from '@/lib/rest';
 import { stripScripts, stripUnwantedTerms } from '@/lib/sanitize';
 import { Sparkles, CheckCircle2, Award, Users, Globe } from 'lucide-react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { fetchRankMathSEO, mapRankMathToMetadata } from '@/lib/seo';
 import { Metadata } from 'next';
 
@@ -18,43 +17,27 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 
-const GET_ABOUT_PAGE = `
-  query GetAboutPage {
-    page(id: "about-us", idType: URI) {
-      title
-      content
-      featuredImage {
-        node {
-          sourceUrl
-        }
-      }
-    }
-  }
-`;
-
-interface Page {
-    title: string;
-    content: string;
-    featuredImage?: {
-        node: {
-            sourceUrl: string;
-        }
-    }
+interface RESTPage {
+    title: { rendered: string };
+    content: { rendered: string };
+    featured_media?: number;
+    _embedded?: {
+        'wp:featuredmedia'?: { source_url: string }[];
+    };
 }
 
-
 export default async function AboutPage() {
-    let page: Page | null = null;
+    let page: RESTPage | null = null;
     try {
-        const data: { page?: Page } | null = await fetchGraphQL(GET_ABOUT_PAGE);
-        if (data && data.page) {
-            page = data.page;
+        const data = await fetchREST('pages?slug=about-us&_embed&_fields=title,content,_links,_embedded');
+        if (data && Array.isArray(data) && data.length > 0) {
+            page = data[0];
         }
     } catch (error) {
         console.error('Error fetching about page:', error);
     }
 
-    if (!page || !page.title || !page.content) {
+    if (!page || !page.title?.rendered || !page.content?.rendered) {
         return (
             <div className="bg-slate-50 min-h-screen pt-32 pb-20">
                 <div className="container text-center py-32 bg-white rounded-[3rem] border border-dashed border-slate-200">
@@ -70,7 +53,7 @@ export default async function AboutPage() {
         );
     }
 
-    const sanitizedContent = stripUnwantedTerms(stripScripts(page.content));
+    const sanitizedContent = stripUnwantedTerms(stripScripts(page.content.rendered));
 
     return (
         <div className="bg-white min-h-screen pb-32" suppressHydrationWarning>
@@ -83,7 +66,7 @@ export default async function AboutPage() {
                             <Sparkles className="w-3 h-3" /> Our Mission
                         </div>
                         <h1 className="text-4xl md:text-7xl font-black text-slate-900 mb-8 leading-tight font-ubuntu">
-                            {page.title}
+                            {page.title.rendered}
                         </h1>
                         <p className="text-xl text-slate-500 font-light leading-relaxed italic border-l-4 border-primary pl-8 text-left max-w-2xl mx-auto">
                             "Empowering businesses to adapt and flourish in the digital era through creative excellence and technical innovation."
@@ -93,9 +76,9 @@ export default async function AboutPage() {
             </section>
 
             <div className="container px-6 -mt-10 relative z-20">
-                {page.featuredImage && (
+                {page._embedded?.['wp:featuredmedia']?.[0]?.source_url && (
                     <div className="rounded-[3rem] overflow-hidden shadow-2xl border-8 border-white ring-1 ring-slate-100 mb-20 aspect-video md:aspect-[21/9]">
-                        <img src={page.featuredImage.node.sourceUrl} alt={page.title} className="w-full h-full object-cover" />
+                        <img src={page._embedded['wp:featuredmedia'][0].source_url} alt={page.title.rendered} className="w-full h-full object-cover" />
                     </div>
                 )}
 

@@ -9,31 +9,6 @@ import MusicPlayer from '@/components/MusicPlayer';
 import Pagination from '@/components/Pagination';
 import FileInfoCard from '@/components/FileInfoCard';
 
-import { fetchGraphQL } from '@/lib/graphql';
-
-const GET_ALBUM_BY_SLUG = `
-  query GetAlbumBySlug($slug: ID!) {
-    playlist: srPlaylist(id: $slug, idType: SLUG) {
-      databaseId
-      title
-      content
-      date
-      slug
-      featuredImage {
-        node {
-          sourceUrl
-        }
-      }
-      srPlaylistCategories {
-        nodes {
-          name
-          slug
-        }
-      }
-    }
-  }
-`;
-
 interface Track {
     id: number;
     mp3: string;
@@ -43,22 +18,15 @@ interface Track {
     poster: string;
 }
 
-interface AlbumNode {
-    databaseId: number;
-    title: string;
-    content: string;
+interface RESTAlbum {
+    id: number;
+    title: { rendered: string };
+    content: { rendered: string };
     date: string;
     slug: string;
-    featuredImage?: {
-        node: {
-            sourceUrl: string;
-        }
-    };
-    srPlaylistCategories?: {
-        nodes: {
-            name: string;
-            slug: string;
-        }[];
+    _embedded?: {
+        'wp:featuredmedia'?: { source_url: string }[];
+        'wp:term'?: { name: string; slug: string }[][];
     };
 }
 
@@ -72,39 +40,14 @@ export default async function SingleMusic({ params, searchParams }: { params: Pr
     let allTracks: Track[] = [];
 
     try {
-        const data: { playlist?: AlbumNode } | null = await fetchGraphQL(GET_ALBUM_BY_SLUG, { slug });
-        if (data && data.playlist) {
-            const p = data.playlist;
-            album = {
-                id: p.databaseId,
-                title: { rendered: p.title },
-                content: { rendered: p.content },
-                date: p.date,
-                slug: p.slug,
-                _embedded: {
-                    'wp:featuredmedia': p.featuredImage ? [{ source_url: p.featuredImage.node.sourceUrl }] : [],
-                    'wp:term': [p.srPlaylistCategories?.nodes || []]
-                }
-            };
-
-            const trackData = await fetchREST(`https://bootflare.com/?load=playlist.json&albums=${p.databaseId}`);
+        const albums = await fetchREST(`sr_playlist?slug=${slug}&_embed&_fields=id,title,content,date,slug,_links,_embedded`);
+        if (albums && Array.isArray(albums) && albums.length > 0) {
+            album = albums[0];
+            const trackData = await fetchREST(`https://bootflare.com/?load=playlist.json&albums=${album.id}`);
             allTracks = trackData.tracks || [];
-        } else {
-            throw new Error('Album not found via GraphQL, triggering fallback');
         }
     } catch (error) {
-        console.warn('GraphQL failed for Album page, falling back to REST:', error);
-        try {
-            const albums = await fetchREST(`sr_playlist?slug=${slug}&_embed&_fields=id,title,content,date,slug,_links,_embedded`);
-            if (albums.length > 0) {
-                const fetchedAlbum = albums[0];
-                album = fetchedAlbum;
-                const trackData = await fetchREST(`https://bootflare.com/?load=playlist.json&albums=${fetchedAlbum.id}`);
-                allTracks = trackData.tracks || [];
-            }
-        } catch (e) {
-            console.error('Final REST fallback failed:', e);
-        }
+        console.error('Error fetching Album page via REST:', error);
     }
 
     if (!album) {

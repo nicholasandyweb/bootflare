@@ -7,58 +7,7 @@ import LogoSearch from '@/components/LogoSearch';
 
 
 
-import { fetchGraphQL } from '@/lib/graphql';
 
-const GET_COLLECTION_DATA = `
-  query GetLogoCollectionWithLogos($slug: ID!, $offset: Int, $size: Int) {
-    logoCollection(id: $slug, idType: SLUG) {
-      databaseId
-      name
-      description
-    }
-    logos(where: { 
-      offsetPagination: { offset: $offset, size: $size },
-      taxQuery: {
-        taxArray: [
-          {
-            taxonomy: LOGOCOLLECTION,
-            field: SLUG,
-            terms: [$slug]
-          }
-        ]
-      }
-    }) {
-      pageInfo {
-        offsetPagination {
-          total
-        }
-      }
-      nodes {
-        databaseId
-        title
-        slug
-        featuredImage {
-          node {
-            sourceUrl
-            altText
-          }
-        }
-      }
-    }
-  }
-`;
-
-interface CollectionData {
-    logoCollection: {
-        databaseId: number;
-        name: string;
-        description?: string;
-    } | null;
-    logos: {
-        nodes: any[];
-        pageInfo: { offsetPagination: { total: number } };
-    };
-}
 
 export default async function LogoCollectionPage({ params }: { params: Promise<{ slug: string }> }) {
     const { slug } = await params;
@@ -71,44 +20,19 @@ export default async function LogoCollectionPage({ params }: { params: Promise<{
     let totalPages = 1;
 
     try {
-        const offset = (page - 1) * perPage;
-        const data = await fetchGraphQL<CollectionData>(GET_COLLECTION_DATA, { slug, offset, size: perPage });
-
-        if (data && data.logoCollection && data.logos) {
-            const col = data.logoCollection;
-            const logoData = data.logos;
+        const collections = await fetchREST(`logo-collection?slug=${slug}&_fields=id,name,description`);
+        if (collections && Array.isArray(collections) && collections.length > 0) {
+            const col = collections[0];
             collectionName = col.name;
             collectionDescription = col.description || '';
-            logos = logoData.nodes.map(node => ({
-                id: node.databaseId,
-                title: { rendered: node.title },
-                slug: node.slug,
-                _embedded: {
-                    'wp:featuredmedia': node.featuredImage ? [{
-                        source_url: node.featuredImage.node.sourceUrl,
-                        alt_text: node.featuredImage.node.altText
-                    }] : []
-                }
-            }));
-            totalPages = Math.ceil(logoData.pageInfo.offsetPagination.total / perPage);
-        } else {
-            throw new Error('GraphQL returned no data for collection or logos');
-        }
-    } catch (error) {
-        console.warn('GraphQL failed for LogoCollection, falling back to REST:', error);
-        try {
-            const collections = await fetchREST(`logo-collection?slug=${slug}&_fields=id,name,description`);
-            if (collections.length > 0) {
-                const colId = collections[0].id;
-                collectionName = collections[0].name;
-                collectionDescription = collections[0].description || '';
-                const res = await fetchRESTWithMeta(`logo?logo-collection=${colId}&per_page=${perPage}&page=${page}&_embed&_fields=id,title,slug,_links,_embedded`);
+            const res = await fetchRESTWithMeta(`logo?logo-collection=${col.id}&per_page=${perPage}&page=${page}&_embed&_fields=id,title,slug,_links,_embedded`);
+            if (res && res.data) {
                 logos = res.data;
                 totalPages = res.totalPages;
             }
-        } catch (e) {
-            console.error('Final REST fallback failed:', e);
         }
+    } catch (error) {
+        console.error('Error fetching LogoCollection via REST:', error);
     }
 
     return (

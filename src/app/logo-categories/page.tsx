@@ -7,7 +7,7 @@ import { decodeEntities } from '@/lib/sanitize';
 import DmcaCard from '@/components/DmcaCard';
 import LogoSearch from '@/components/LogoSearch';
 
-import { fetchGraphQL } from '@/lib/graphql';
+
 
 export async function generateMetadata(): Promise<Metadata> {
     const seo = await fetchRankMathSEO('https://bootflare.com/free-brand-logos/');
@@ -15,27 +15,7 @@ export async function generateMetadata(): Promise<Metadata> {
     return { title: 'Logo Categories | Bootflare' };
 }
 
-const GET_CATEGORIES_DATA = `
-  query GetLogoCategoriesArchive {
-    categories: logoCategories(first: 100, where: { hideEmpty: true }) {
-      nodes {
-        databaseId
-        name
-        slug
-        count
-      }
-    }
-    taxonomy: taxonomy(id: "logos", idType: NAME) {
-      name
-      description
-    }
-  }
-`;
 
-interface CategoriesData {
-    categories: { nodes: { databaseId: number; name: string; slug: string; count: number }[] };
-    taxonomy: { name: string; description?: string } | null;
-}
 
 interface LogoCategory {
     id: number;
@@ -53,37 +33,25 @@ export default async function LogoCategoriesArchive() {
     let taxonomyMeta: any = null;
 
     try {
-        const [gqlData, seoResult] = await Promise.all([
-            fetchGraphQL<CategoriesData>(GET_CATEGORIES_DATA),
+        const [results, seoResult] = await Promise.all([
+            Promise.allSettled([
+                fetchREST('logo-category?per_page=100&hide_empty=true&_fields=id,name,slug,count'),
+                fetchREST('taxonomies/logo-category?_fields=name,description')
+            ]),
             fetchRankMathSEO('https://bootflare.com/free-brand-logos/')
         ]);
 
-        if (gqlData && gqlData.categories) {
-            categories = gqlData.categories.nodes.map(node => ({
-                id: node.databaseId,
-                name: node.name,
-                slug: node.slug,
-                count: node.count
-            }));
-            taxonomyMeta = gqlData.taxonomy;
+        const taxonomyResults = results as any;
+        if (taxonomyResults[0].status === 'fulfilled') {
+            categories = Array.isArray(taxonomyResults[0].value) ? taxonomyResults[0].value : [];
+        }
+        if (taxonomyResults[1].status === 'fulfilled') {
+            taxonomyMeta = taxonomyResults[1].value;
         }
 
         seoData = seoResult;
     } catch (error) {
-        console.warn('GraphQL failed for LogoCategories, falling back to REST:', error);
-        try {
-            // Discovered REST taxonomy: logos
-            const results = await Promise.allSettled([
-                fetchREST('logos?per_page=100&hide_empty=true&_fields=id,name,slug,count'),
-                fetchREST('taxonomies/logos?_fields=name,description')
-            ]);
-            if (results[0].status === 'fulfilled') {
-                categories = Array.isArray(results[0].value) ? results[0].value : [];
-            }
-            if (results[1].status === 'fulfilled') taxonomyMeta = results[1].value;
-        } catch (e) {
-            console.error('Final REST fallback failed:', e);
-        }
+        console.error('Error fetching LogoCategories via REST:', error);
     }
 
     // The description logic is updated to remove reliance on wpData,

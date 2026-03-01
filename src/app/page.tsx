@@ -14,61 +14,32 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 
-import { fetchGraphQL } from '@/lib/graphql';
-
-const GET_HOME_DATA = `
-  query GetHomeData {
-    logos(first: 20) {
-      nodes {
-        featuredImage {
-          node {
-            sourceUrl
-          }
-        }
-      }
-    }
-    music: srPlaylists(first: 10) {
-      nodes {
-        featuredImage {
-          node {
-            sourceUrl
-          }
-        }
-      }
-    }
-  }
-`;
-
-interface HomeData {
-  logos: { nodes: { featuredImage?: { node: { sourceUrl: string } } }[] };
-  music: { nodes: { featuredImage?: { node: { sourceUrl: string } } }[] };
-}
+import { fetchREST } from '@/lib/rest';
 
 export default async function Home() {
   let logoImages: string[] = [];
   let musicImages: string[] = [];
 
   try {
-    const data = await fetchGraphQL<HomeData>(GET_HOME_DATA);
+    const [logosData, musicData] = await Promise.all([
+      fetchREST('logo?per_page=20&_fields=id,_links,_embedded'),
+      fetchREST('sr_playlist?per_page=10&_fields=id,_links,_embedded')
+    ]);
 
-    if (data) {
-      if (data.logos?.nodes) {
-        logoImages = data.logos.nodes
-          .map(node => node.featuredImage?.node?.sourceUrl)
-          .filter((url): url is string => !!url);
-      }
+    if (logosData && Array.isArray(logosData)) {
+      logoImages = logosData
+        .map((item: any) => item._embedded?.['wp:featuredmedia']?.[0]?.source_url)
+        .filter((url): url is string => !!url);
+    }
 
-      if (data.music?.nodes) {
-        musicImages = data.music.nodes
-          .map(node => node.featuredImage?.node?.sourceUrl)
-          .filter((url): url is string => !!url);
-      }
+    if (musicData && Array.isArray(musicData)) {
+      musicImages = musicData
+        .map((item: any) => item._embedded?.['wp:featuredmedia']?.[0]?.source_url)
+        .filter((url): url is string => !!url);
     }
   } catch (error) {
     console.error('Error fetching homepage data:', error);
   }
-
-
 
   return <HomeClient logos={logoImages} music={musicImages} />;
 }

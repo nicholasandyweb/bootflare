@@ -8,31 +8,6 @@ import LogoCard from '@/components/LogoCard';
 import CategoryList from '@/components/CategoryList';
 import Pagination from '@/components/Pagination';
 import LogosTemplate from '@/components/LogosTemplate';
-import { fetchGraphQL } from '@/lib/graphql';
-
-const SEARCH_LOGOS_QUERY = `
-  query SearchLogos($search: String, $offset: Int, $size: Int) {
-    logos(where: { search: $search, offsetPagination: { offset: $offset, size: $size } }) {
-      pageInfo {
-        offsetPagination {
-          total
-        }
-      }
-      nodes {
-        databaseId
-        title
-        slug
-        featuredImage {
-          node {
-            sourceUrl
-            altText
-          }
-        }
-      }
-    }
-  }
-`;
-
 
 interface Logo {
   id: number;
@@ -56,7 +31,6 @@ export async function generateMetadata({ searchParams }: { searchParams: Promise
   if (seo) return mapRankMathToMetadata(seo);
   return { title: 'Free Brand Logos | Bootflare' };
 }
-
 export default async function LogoArchive({ searchParams }: { searchParams: Promise<{ s?: string; page?: string }> }) {
   const params = await searchParams;
   const searchTerm = params.s || '';
@@ -80,37 +54,15 @@ export default async function LogoArchive({ searchParams }: { searchParams: Prom
   let totalPages = 1;
 
   try {
-    const offset = (page - 1) * 24;
-    const data = await fetchGraphQL<{ logos: { nodes: any[], pageInfo: { offsetPagination: { total: number } } } }>(
-      SEARCH_LOGOS_QUERY,
-      { search: searchTerm, offset, size: 24 }
+    const res = await fetchRESTWithMeta(
+      `logo?search=${encodeURIComponent(searchTerm)}&per_page=24&page=${page}&_embed`
     );
-
-    if (data.logos) {
-      logos = data.logos.nodes.map(node => ({
-        id: node.databaseId,
-        title: { rendered: node.title },
-        slug: node.slug,
-        _embedded: {
-          'wp:featuredmedia': node.featuredImage ? [{
-            source_url: node.featuredImage.node.sourceUrl,
-            alt_text: node.featuredImage.node.altText
-          }] : []
-        }
-      }));
-      totalPages = Math.ceil(data.logos.pageInfo.offsetPagination.total / 24);
+    if (res && res.data) {
+      logos = res.data;
+      totalPages = res.totalPages;
     }
   } catch (error) {
-    console.error('Error fetching logos via GraphQL, falling back to REST:', error);
-    try {
-      const res = await fetchRESTWithMeta(
-        `logo?search=${encodeURIComponent(searchTerm)}&per_page=24&page=${page}&_embed`
-      );
-      logos = Array.from(new Map(res.data.map((item: any) => [item.id, item])).values()) as Logo[];
-      totalPages = res.totalPages;
-    } catch (e) {
-      console.error('Final REST fallback failed:', e);
-    }
+    console.error('Error fetching logos via REST:', error);
   }
 
   return (

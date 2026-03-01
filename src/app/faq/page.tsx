@@ -1,5 +1,5 @@
 export const revalidate = 86400; // 24 hours
-import { fetchGraphQL } from '@/lib/graphql';
+import { fetchREST } from '@/lib/rest';
 import { stripScripts } from '@/lib/sanitize';
 import { ChevronRight, MessageCircle, Sparkles, HelpCircle } from 'lucide-react';
 import Link from 'next/link';
@@ -18,28 +18,19 @@ export async function generateMetadata(): Promise<Metadata> {
     return { title: 'FAQ | Bootflare' };
 }
 
-const GET_FAQ_PAGE = `
-  query GetFAQPage {
-    page(id: "/faq/", idType: URI) {
-      title
-      content
-    }
-  }
-`;
-
-interface WPPage {
-    title: string;
-    content: string;
+interface RESTPage {
+    title: { rendered: string };
+    content: { rendered: string };
 }
 
 const FALLBACK_FAQS: { q: string; a: string }[] = [];
 
 export default async function FAQPage() {
-    let page: WPPage | null = null;
+    let page: RESTPage | null = null;
     try {
-        const data: { page?: WPPage } | null = await fetchGraphQL(GET_FAQ_PAGE);
-        if (data && data.page) {
-            page = data.page;
+        const data = await fetchREST('pages?slug=faq&_fields=title,content');
+        if (data && Array.isArray(data) && data.length > 0) {
+            page = data[0];
         }
     } catch (error) {
         console.error('Error fetching FAQ page:', error);
@@ -59,8 +50,8 @@ export default async function FAQPage() {
         );
     }
 
-    const intro = page.content ? extractFAQIntro(page.content) : '';
-    const faqs = page.content ? parseFAQs(page.content) : [];
+    const intro = page.content.rendered ? extractFAQIntro(page.content.rendered) : '';
+    const faqs = page.content.rendered ? parseFAQs(page.content.rendered) : [];
     const displayFaqs = faqs;
 
     return (
@@ -72,7 +63,7 @@ export default async function FAQPage() {
                         <Sparkles className="w-3 h-3" /> Support Center
                     </div>
                     <h1 className="text-5xl md:text-7xl font-black text-slate-900 mb-8 font-ubuntu leading-tight">
-                        {page?.title ?? 'Frequently Asked'} <span className="text-gradient">Questions</span>
+                        {page?.title.rendered ?? 'Frequently Asked'} <span className="text-gradient">Questions</span>
                     </h1>
                     {intro ? (
                         <div

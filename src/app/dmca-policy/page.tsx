@@ -1,5 +1,5 @@
 export const revalidate = 86400; // 24 hours
-import { fetchGraphQL } from '@/lib/graphql';
+import { fetchREST } from '@/lib/rest';
 import { fetchRankMathSEO, mapRankMathToMetadata } from '@/lib/seo';
 import { Metadata } from 'next';
 import WPPageContent from '@/components/WPPageContent';
@@ -15,23 +15,15 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: 'DMCA Policy | Bootflare' };
 }
 
-const QUERY = `
-  query {
-    page(id: "/dmca-policy/", idType: URI) {
-      title
-      content
-    }
-  }
-`;
 
-interface WPPage { title: string; content: string; }
+interface RESTPage { title: { rendered: string }; content: { rendered: string }; }
 
 export default async function DMCAPolicyPage() {
-  let page: WPPage | null = null;
+  let page: RESTPage | null = null;
   try {
-    const data: { page?: WPPage } | null = await fetchGraphQL(QUERY);
-    if (data && data.page) {
-      page = data.page;
+    const data = await fetchREST('pages?slug=dmca-policy&_fields=title,content');
+    if (data && Array.isArray(data) && data.length > 0) {
+      page = data[0];
     }
   } catch (e) {
     console.error('Error fetching DMCA Policy:', e);
@@ -53,5 +45,5 @@ export default async function DMCAPolicyPage() {
     );
   }
 
-  return <WPPageContent title={page.title} content={page.content} badge="Legal" />;
+  return <WPPageContent title={page.title.rendered} content={page.content.rendered} badge="Legal" />;
 }

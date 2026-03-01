@@ -7,7 +7,7 @@ import { decodeEntities } from '@/lib/sanitize';
 import DmcaCard from '@/components/DmcaCard';
 import LogoSearch from '@/components/LogoSearch';
 
-import { fetchGraphQL } from '@/lib/graphql';
+
 
 export async function generateMetadata(): Promise<Metadata> {
     const seo = await fetchRankMathSEO('https://bootflare.com/logo-collections/');
@@ -15,27 +15,7 @@ export async function generateMetadata(): Promise<Metadata> {
     return { title: 'Logo Collections | Bootflare' };
 }
 
-const GET_COLLECTIONS_DATA = `
-  query GetLogoCollectionsArchive {
-    collections: logoCollections(first: 100, where: { hideEmpty: true }) {
-      nodes {
-        databaseId
-        name
-        slug
-        count
-      }
-    }
-    taxonomy: taxonomy(id: "logo-collection", idType: NAME) {
-      name
-      description
-    }
-  }
-`;
 
-interface CollectionsData {
-    collections: { nodes: { databaseId: number; name: string; slug: string; count: number }[] };
-    taxonomy: { name: string; description?: string } | null;
-}
 
 interface LogoCollection {
     id: number;
@@ -50,44 +30,25 @@ export default async function LogoCollectionsArchive() {
     let taxonomyMeta: any = null;
 
     try {
-        const [gqlData, seoResult] = await Promise.all([
-            fetchGraphQL<CollectionsData>(GET_COLLECTIONS_DATA),
+        const [results, seoResult] = await Promise.all([
+            Promise.allSettled([
+                fetchREST('logo-collection?per_page=100&hide_empty=true&_fields=id,name,slug,count'),
+                fetchREST('taxonomies/logo-collection?_fields=name,description')
+            ]),
             fetchRankMathSEO('https://bootflare.com/logo-collections/')
         ]);
 
-        if (gqlData && gqlData.collections) {
-            collections = gqlData.collections.nodes.map(node => ({
-                id: node.databaseId,
-                name: node.name,
-                slug: node.slug,
-                count: node.count
-            }));
-            taxonomyMeta = gqlData.taxonomy;
-        } else {
-            throw new Error('GraphQL returned no data for LogoCollections');
+        const taxonomyResults = results as any;
+        if (taxonomyResults[0].status === 'fulfilled') {
+            collections = Array.isArray(taxonomyResults[0].value) ? taxonomyResults[0].value : [];
+        }
+        if (taxonomyResults[1].status === 'fulfilled') {
+            taxonomyMeta = taxonomyResults[1].value;
         }
 
         seoData = seoResult;
     } catch (error) {
-        console.warn('GraphQL failed for LogoCollections, falling back to REST:', error);
-        try {
-            // Discovered REST taxonomy: logo-collection
-            const results = await Promise.allSettled([
-                fetchREST('logo-collection?per_page=100&hide_empty=true&_fields=id,name,slug,count'),
-                fetchREST('taxonomies/logo-collection?_fields=name,description')
-            ]);
-            if (results[0].status === 'fulfilled') {
-                const value = results[0].value;
-                if (Array.isArray(value)) {
-                    collections = value as LogoCollection[];
-                } else {
-                    collections = [];
-                }
-            }
-            if (results[1].status === 'fulfilled') taxonomyMeta = results[1].value;
-        } catch (e) {
-            console.error('Final REST fallback failed:', e);
-        }
+        console.error('Error fetching LogoCollections via REST:', error);
     }
 
     const description = taxonomyMeta?.description

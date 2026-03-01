@@ -1,5 +1,4 @@
-import { fetchRESTWithMeta } from '@/lib/rest';
-import { fetchGraphQL } from '@/lib/graphql';
+import { fetchREST, fetchRESTWithMeta } from '@/lib/rest';
 import { fetchRankMathSEO } from '@/lib/seo';
 import Link from 'next/link';
 import { Sparkles } from 'lucide-react';
@@ -8,15 +7,6 @@ import LogoCard from '@/components/LogoCard';
 import CategoryList from '@/components/CategoryList';
 import Pagination from '@/components/Pagination';
 import { decodeEntities } from '@/lib/sanitize';
-
-interface Logo {
-    id: number;
-    title: { rendered: string };
-    slug: string;
-    _embedded?: {
-        'wp:featuredmedia'?: { source_url: string; alt_text?: string }[];
-    };
-}
 
 interface LogosTemplateProps {
     page: number;
@@ -29,39 +19,6 @@ interface LogosTemplateProps {
     /** How many logos per page */
     perPage?: number;
 }
-
-const GET_LOGOS_QUERY = `
-  query GetLogos($offset: Int, $size: Int) {
-    logos(where: { offsetPagination: { offset: $offset, size: $size } }) {
-      pageInfo {
-        offsetPagination {
-          total
-        }
-      }
-      nodes {
-        databaseId
-        title
-        slug
-        featuredImage {
-          node {
-            sourceUrl
-            altText
-          }
-        }
-      }
-    }
-  }
-`;
-
-const GET_PAGE_QUERY = (id: string) => `
-  query GetPageMeta {
-    page(id: "${id}", idType: URI) {
-      title
-      excerpt
-    }
-  }
-`;
-
 export default async function LogosTemplate({
     page,
     route,
@@ -75,24 +32,27 @@ export default async function LogosTemplate({
     let seoData: any = null;
 
     const offset = (page - 1) * perPage;
+    const pageSlug = queryId.replace(/\//g, '') || 'logos';
 
-    // HYBRID APPROACH:
-    // 1. Use REST for the paginated list (because WPGraphQL lacks offsetPagination plugin)
-    // 2. Use GraphQL for metadata (stable and fast)
     const [logosResult, pageResult, seoResult] = await Promise.allSettled([
         fetchRESTWithMeta(`logo?per_page=${perPage}&page=${page}&_embed&_fields=id,title,slug,_links,_embedded`),
-        fetchGraphQL<{ page: any }>(GET_PAGE_QUERY(queryId)),
+        fetchREST(`pages?slug=${pageSlug}&_fields=title,excerpt`),
         fetchRankMathSEO(seoUrl),
     ]);
 
     if (logosResult.status === 'fulfilled' && logosResult.value?.data) {
         logos = Array.isArray(logosResult.value.data) ? logosResult.value.data : [];
         totalPages = logosResult.value.totalPages || 1;
-    } else {
-        console.error(`REST fetching failed for ${route}:`, logosResult.status === 'rejected' ? logosResult.reason : 'No data');
     }
 
-    wpPage = pageResult.status === 'fulfilled' ? (pageResult.value?.page ?? null) : null;
+    if (pageResult.status === 'fulfilled' && Array.isArray(pageResult.value) && pageResult.value.length > 0) {
+        const p = pageResult.value[0];
+        wpPage = {
+            title: p.title?.rendered || '',
+            excerpt: p.excerpt?.rendered || ''
+        };
+    }
+
     seoData = seoResult.status === 'fulfilled' ? seoResult.value : null;
 
     const description = seoData?.description

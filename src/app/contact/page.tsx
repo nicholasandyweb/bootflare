@@ -1,28 +1,19 @@
 export const revalidate = 86400; // 24 hours
-import { fetchGraphQL } from '@/lib/graphql';
+import { fetchREST } from '@/lib/rest';
 import ContactForm from '@/components/ContactForm';
 import Link from 'next/link';
 
-const GET_CONTACT_PAGE = `
-  query GetContactPage {
-    page(id: "/contact/", idType: URI) {
-      title
-      excerpt
-    }
-  }
-`;
-
-interface WPPage {
-  title: string;
-  excerpt?: string;
+interface RESTPage {
+  title: { rendered: string };
+  excerpt: { rendered: string };
 }
 
 export default async function ContactPage() {
-  let page: WPPage | null = null;
+  let page: RESTPage | null = null;
   try {
-    const data: { page?: WPPage } | null = await fetchGraphQL(GET_CONTACT_PAGE);
-    if (data && data.page) {
-      page = data.page;
+    const data = await fetchREST('pages?slug=contact&_fields=title,excerpt');
+    if (data && Array.isArray(data) && data.length > 0) {
+      page = data[0];
     }
   } catch (error) {
     console.error('Error fetching contact page:', error);
@@ -45,9 +36,9 @@ export default async function ContactPage() {
   }
 
   // Strip HTML tags from excerpt for plain text display
-  const plainExcerpt = page.excerpt
-    ? page.excerpt.replace(/<[^>]*>/g, '').trim()
+  const plainExcerpt = page.excerpt.rendered
+    ? page.excerpt.rendered.replace(/<[^>]*>/g, '').trim()
     : undefined;
 
-  return <ContactForm title={page.title} excerpt={plainExcerpt} />;
+  return <ContactForm title={page.title.rendered} excerpt={plainExcerpt} />;
 }

@@ -1,5 +1,5 @@
 export const revalidate = 3600;
-import { fetchGraphQL } from '@/lib/graphql';
+import { fetchREST } from '@/lib/rest';
 import Link from 'next/link';
 import { stripScripts, decodeEntities } from '@/lib/sanitize';
 import { Calendar, ChevronRight, Hash, AlertTriangle } from 'lucide-react';
@@ -8,74 +8,34 @@ import { Metadata } from 'next';
 export const dynamicParams = true;
 export const dynamic = 'force-dynamic';
 
-const GET_CATEGORY_POSTS = `
-  query GetCategoryPosts($slug: ID!) {
-    category(id: $slug, idType: SLUG) {
-      id
-      name
-      description
-      slug
-      posts(first: 12) {
-        nodes {
-          id
-          title
-          slug
-          excerpt
-          date
-          featuredImage {
-            node {
-              sourceUrl
-            }
-          }
-          categories {
-            nodes {
-              name
-              slug
-            }
-          }
-        }
-      }
-    }
-  }
-`;
-
-interface GQLCategory {
-    id: string;
+interface RESTCategory {
+    id: number;
     name: string;
     description: string;
     slug: string;
-    posts?: {
-        nodes: GQLPost[];
-    };
 }
 
-interface GQLPost {
-    id: string;
-    title: string;
+interface RESTPost {
+    id: number;
+    title: { rendered: string };
     slug: string;
-    excerpt: string;
+    excerpt: { rendered: string };
     date: string;
-    featuredImage?: {
-        node: {
-            sourceUrl: string;
-        };
-    };
-    categories?: {
-        nodes: {
-            name: string;
-            slug: string;
-        }[];
+    _embedded?: {
+        'wp:featuredmedia'?: { source_url: string }[];
+        'wp:term'?: { name: string; slug: string }[][];
     };
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
     const { slug } = await params;
     try {
-        const data: { category?: GQLCategory | null } | null = await fetchGraphQL(GET_CATEGORY_POSTS, { slug });
-        if (data && data.category) {
+        const categories = await fetchREST(`categories?slug=${slug}&_fields=name,description`);
+        if (categories && Array.isArray(categories) && categories.length > 0) {
+            const cat = categories[0];
             return {
-                title: `${decodeEntities(data.category.name)} | Blog Category | Bootflare`,
-                description: data.category.description || `Browse all articles in the ${decodeEntities(data.category.name)} category.`
+                title: `${decodeEntities(cat.name)} | Blog Category | Bootflare`,
+                description: cat.description || `Browse all articles in the ${decodeEntities(cat.name)} category.`
             };
         }
     } catch (error) {
@@ -86,13 +46,16 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
 export default async function CategoryPage({ params }: { params: Promise<{ slug: string }> }) {
     const { slug } = await params;
-    let category: GQLCategory | null = null;
+    let category: RESTCategory | null = null;
+    let posts: RESTPost[] = [];
     let errorOccurred = false;
 
     try {
-        const data: { category?: GQLCategory | null } | null = await fetchGraphQL(GET_CATEGORY_POSTS, { slug });
-        if (data && data.category) {
-            category = data.category;
+        const categories = await fetchREST(`categories?slug=${slug}&_fields=id,name,description,slug`);
+        if (categories && Array.isArray(categories) && categories.length > 0) {
+            category = categories[0];
+            const postsData = await fetchREST(`posts?categories=${category!.id}&per_page=12&_embed&_fields=id,title,slug,excerpt,date,_links,_embedded`);
+            posts = Array.isArray(postsData) ? postsData : [];
         }
     } catch (error) {
         console.error('Error fetching category posts:', error);
@@ -131,8 +94,6 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
         );
     }
 
-    const posts = category.posts?.nodes || [];
-
     return (
         <div className="bg-slate-50 min-h-screen pt-32 pb-20">
             <div className="container">
@@ -152,8 +113,8 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
                 {/* Grid Section */}
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
                     {posts.map((post) => {
-                        const featuredImage = post.featuredImage?.node?.sourceUrl;
-                        const postCategory = post.categories?.nodes[0] || { name: category!.name, slug: category!.slug };
+                        const featuredImage = post._embedded?.['wp:featuredmedia']?.[0]?.source_url;
+                        const postCategory = post._embedded?.['wp:term']?.[0][0] || { name: category!.name, slug: category!.slug };
 
                         return (
                             <article key={post.id} className="card-premium !p-0 flex flex-col group h-full transition-all hover:shadow-2xl hover:shadow-primary/5">
@@ -161,7 +122,7 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
                                     <Link href={`/${post.slug}/`} prefetch={false} className="relative h-64 overflow-hidden rounded-t-[2rem]">
                                         <img
                                             src={featuredImage}
-                                            alt={post.title}
+                                            alt={post.title.rendered}
                                             className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                                         />
                                         <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -180,13 +141,13 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
                                     <Link href={`/${post.slug}/`} prefetch={false} className="mb-4">
                                         <h3
                                             className="text-xl font-bold text-slate-900 hover:text-primary transition-colors line-clamp-2 leading-tight"
-                                            dangerouslySetInnerHTML={{ __html: post.title }}
+                                            dangerouslySetInnerHTML={{ __html: post.title.rendered }}
                                         />
                                     </Link>
 
                                     <div
                                         className="text-slate-500 text-sm line-clamp-2 mb-8 font-light flex-1 [&_p]:mb-0 leading-relaxed"
-                                        dangerouslySetInnerHTML={{ __html: stripScripts(post.excerpt) }}
+                                        dangerouslySetInnerHTML={{ __html: stripScripts(post.excerpt.rendered) }}
                                     />
 
                                     <Link href={`/${post.slug}/`} prefetch={false} className="flex items-center gap-2 text-primary font-bold text-sm group-link">

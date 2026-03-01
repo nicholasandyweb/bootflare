@@ -1,25 +1,5 @@
 import { fetchREST } from '@/lib/rest';
-import { fetchGraphQL } from '@/lib/graphql';
 import { NextResponse } from 'next/server';
-
-const SEARCH_LOGOS_QUERY = `
-  query SearchLogos($search: String, $size: Int) {
-    logos(first: $size, where: { search: $search }) {
-      nodes {
-        databaseId
-        title
-        slug
-        featuredImage {
-          node {
-            sourceUrl
-            altText
-          }
-        }
-      }
-    }
-  }
-`;
-
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const query = searchParams.get('q');
@@ -29,25 +9,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    let logos: any[] = [];
-    const data = await fetchGraphQL<{ logos: { nodes: any[] } }>(SEARCH_LOGOS_QUERY, { search: query, size: 50 });
-
-    if (data && data.logos) {
-      logos = data.logos.nodes.map(node => ({
-        id: node.databaseId,
-        title: { rendered: node.title },
-        slug: node.slug,
-        _embedded: {
-          'wp:featuredmedia': node.featuredImage ? [{
-            source_url: node.featuredImage.node.sourceUrl,
-            alt_text: node.featuredImage.node.altText
-          }] : []
-        }
-      }));
-    } else {
-      // Fallback to REST if GraphQL returns no data or fails silently
-      logos = await fetchREST(`logo?search=${encodeURIComponent(query)}&per_page=50&_embed`);
-    }
+    const logos = await fetchREST(`logo?search=${encodeURIComponent(query)}&per_page=50&_embed&_fields=id,title,slug,_links,_embedded`);
 
     // Deduplicate results by ID
     const uniqueLogos = Array.from(new Map(logos.map((item: any) => [item.id, item])).values());

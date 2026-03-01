@@ -8,58 +8,7 @@ import CategoryList from '@/components/CategoryList';
 
 
 
-import { fetchGraphQL } from '@/lib/graphql';
 
-const GET_CATEGORY_DATA = `
-  query GetLogoCategoryWithLogos($slug: ID!, $offset: Int, $size: Int) {
-    logoCategory(id: $slug, idType: SLUG) {
-      databaseId
-      name
-      description
-    }
-    logos(where: { 
-      offsetPagination: { offset: $offset, size: $size },
-      taxQuery: {
-        taxArray: [
-          {
-            taxonomy: LOGOCATEGORY,
-            field: SLUG,
-            terms: [$slug]
-          }
-        ]
-      }
-    }) {
-      pageInfo {
-        offsetPagination {
-          total
-        }
-      }
-      nodes {
-        databaseId
-        title
-        slug
-        featuredImage {
-          node {
-            sourceUrl
-            altText
-          }
-        }
-      }
-    }
-  }
-`;
-
-interface CategoryData {
-    logoCategory: {
-        databaseId: number;
-        name: string;
-        description?: string;
-    } | null;
-    logos: {
-        nodes: any[];
-        pageInfo: { offsetPagination: { total: number } };
-    };
-}
 
 export default async function LogoCategoryPaginated({ params }: { params: Promise<{ slug: string, pageSlug: string }> }) {
     const { slug, pageSlug } = await params;
@@ -72,44 +21,19 @@ export default async function LogoCategoryPaginated({ params }: { params: Promis
     let totalPages = 1;
 
     try {
-        const offset = (page - 1) * perPage;
-        const data = await fetchGraphQL<CategoryData>(GET_CATEGORY_DATA, { slug, offset, size: perPage });
-
-        if (data && data.logoCategory && data.logos) {
-            const cat = data.logoCategory;
-            const logoData = data.logos;
+        const categories = await fetchREST(`logo-category?slug=${slug}&_fields=id,name,description`);
+        if (categories && Array.isArray(categories) && categories.length > 0) {
+            const cat = categories[0];
             categoryName = cat.name;
             categoryDescription = cat.description || '';
-            logos = logoData.nodes.map(node => ({
-                id: node.databaseId,
-                title: { rendered: node.title },
-                slug: node.slug,
-                _embedded: {
-                    'wp:featuredmedia': node.featuredImage ? [{
-                        source_url: node.featuredImage.node.sourceUrl,
-                        alt_text: node.featuredImage.node.altText
-                    }] : []
-                }
-            }));
-            totalPages = Math.ceil(logoData.pageInfo.offsetPagination.total / perPage);
-        } else {
-            throw new Error('GraphQL returned no data for category or logos');
-        }
-    } catch (error) {
-        console.warn('GraphQL failed for LogoCategoryPaginated, falling back to REST:', error);
-        try {
-            const categories = await fetchREST(`logos?slug=${slug}&_fields=id,name,description`);
-            if (categories.length > 0) {
-                const catId = categories[0].id;
-                categoryName = categories[0].name;
-                categoryDescription = categories[0].description || '';
-                const res = await fetchRESTWithMeta(`logo?logos=${catId}&per_page=${perPage}&page=${page}&_embed&_fields=id,title,slug,_links,_embedded`);
+            const res = await fetchRESTWithMeta(`logo?logo-category=${cat.id}&per_page=${perPage}&page=${page}&_embed&_fields=id,title,slug,_links,_embedded`);
+            if (res && res.data) {
                 logos = res.data;
                 totalPages = res.totalPages;
             }
-        } catch (e) {
-            console.error('Final REST fallback failed:', e);
         }
+    } catch (error) {
+        console.error('Error fetching LogoCategoryPaginated via REST:', error);
     }
 
     return (

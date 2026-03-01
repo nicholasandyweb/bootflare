@@ -1,52 +1,19 @@
-export const revalidate = 3600; // 1 hour
-import { fetchGraphQL } from '@/lib/graphql';
+import { fetchREST } from '@/lib/rest';
 import Link from 'next/link';
 import { stripScripts } from '@/lib/sanitize';
 import { Calendar, ChevronRight, AlertTriangle } from 'lucide-react';
 import { fetchRankMathSEO, mapRankMathToMetadata } from '@/lib/seo';
 import { Metadata } from 'next';
 
-const GET_BLOG_POSTS = `
-  query GetBlogPosts {
-    posts(first: 8) {
-      nodes {
-        id
-        title
-        slug
-        excerpt
-        date
-        featuredImage {
-          node {
-            sourceUrl
-          }
-        }
-        categories {
-          nodes {
-            name
-            slug
-          }
-        }
-      }
-    }
-  }
-`;
-
-interface GQLPost {
-  id: string;
-  title: string;
+interface RESTPost {
+  id: number;
+  title: { rendered: string };
   slug: string;
-  excerpt: string;
+  excerpt: { rendered: string };
   date: string;
-  featuredImage?: {
-    node: {
-      sourceUrl: string;
-    };
-  };
-  categories?: {
-    nodes: {
-      name: string;
-      slug: string;
-    }[];
+  _embedded?: {
+    'wp:featuredmedia'?: { source_url: string }[];
+    'wp:term'?: { name: string; slug: string }[][];
   };
 }
 
@@ -61,12 +28,12 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function BlogPage() {
-  let posts: GQLPost[] = [];
+  let posts: RESTPost[] = [];
   let errorOccurred = false;
 
   try {
-    const data: { posts?: { nodes: GQLPost[] } } = await fetchGraphQL(GET_BLOG_POSTS);
-    posts = data?.posts?.nodes || [];
+    const data = await fetchREST('posts?per_page=8&_embed&_fields=id,title,slug,excerpt,date,_links,_embedded');
+    posts = Array.isArray(data) ? data : [];
   } catch (error) {
     console.error('Error fetching posts:', error);
     errorOccurred = true;
@@ -105,8 +72,8 @@ export default async function BlogPage() {
         {/* Featured Post (Optional, taking first) */}
         {posts.length > 0 && (() => {
           const firstPost = posts[0];
-          const featuredImage = firstPost.featuredImage?.node?.sourceUrl;
-          const categories = firstPost.categories?.nodes || [];
+          const featuredImage = firstPost._embedded?.['wp:featuredmedia']?.[0]?.source_url;
+          const categories = firstPost._embedded?.['wp:term']?.[0] || [];
 
           return (
             <div className="mb-16">
@@ -115,14 +82,14 @@ export default async function BlogPage() {
                   <Link href={`/${firstPost.slug}/`} prefetch={false} className="block relative aspect-video rounded-[2rem] overflow-hidden group">
                     <img
                       src={featuredImage}
-                      alt={firstPost.title}
+                      alt={firstPost.title.rendered}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                     />
                   </Link>
                 )}
                 <div>
                   <div className="flex gap-2 mb-6">
-                    {categories.map(cat => (
+                    {categories.map((cat: any) => (
                       <Link key={cat.slug} href={`/category/${cat.slug}`} prefetch={false} className="text-xs font-bold text-primary uppercase tracking-widest px-3 py-1 bg-primary/10 rounded-full hover:bg-primary hover:text-white transition-all">
                         {cat.name}
                       </Link>
@@ -131,12 +98,12 @@ export default async function BlogPage() {
                   <Link href={`/${firstPost.slug}/`} prefetch={false}>
                     <h2
                       className="text-3xl md:text-4xl font-bold mb-6 hover:text-primary transition-colors text-slate-900"
-                      dangerouslySetInnerHTML={{ __html: firstPost.title }}
+                      dangerouslySetInnerHTML={{ __html: firstPost.title.rendered }}
                     />
                   </Link>
                   <div
                     className="text-slate-500 text-lg line-clamp-3 mb-8 font-light [&_p]:mb-0"
-                    dangerouslySetInnerHTML={{ __html: stripScripts(firstPost.excerpt) }}
+                    dangerouslySetInnerHTML={{ __html: stripScripts(firstPost.excerpt.rendered) }}
                   />
                   <Link href={`/${firstPost.slug}/`} prefetch={false} className="btn-premium group !px-10">
                     Read Article <ChevronRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
@@ -150,8 +117,8 @@ export default async function BlogPage() {
         {/* Grid Section */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
           {posts.slice(1).map((post) => {
-            const featuredImage = post.featuredImage?.node?.sourceUrl;
-            const categories = post.categories?.nodes || [];
+            const featuredImage = post._embedded?.['wp:featuredmedia']?.[0]?.source_url;
+            const categories = post._embedded?.['wp:term']?.[0] || [];
 
             return (
               <article key={post.id} className="card-premium !p-0 flex flex-col group h-full">
@@ -159,7 +126,7 @@ export default async function BlogPage() {
                   <Link href={`/${post.slug}/`} prefetch={false} className="relative h-64 overflow-hidden rounded-t-[2rem]">
                     <img
                       src={featuredImage}
-                      alt={post.title}
+                      alt={post.title.rendered}
                       className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
@@ -184,13 +151,13 @@ export default async function BlogPage() {
                   <Link href={`/${post.slug}/`} prefetch={false} className="mb-4">
                     <h3
                       className="text-xl font-bold text-slate-900 hover:text-primary transition-colors line-clamp-2 leading-tight"
-                      dangerouslySetInnerHTML={{ __html: post.title }}
+                      dangerouslySetInnerHTML={{ __html: post.title.rendered }}
                     />
                   </Link>
 
                   <div
                     className="text-slate-500 text-sm line-clamp-2 mb-8 font-light flex-1 [&_p]:mb-0"
-                    dangerouslySetInnerHTML={{ __html: stripScripts(post.excerpt) }}
+                    dangerouslySetInnerHTML={{ __html: stripScripts(post.excerpt.rendered) }}
                   />
 
                   <Link href={`/${post.slug}/`} prefetch={false} className="flex items-center gap-2 text-primary font-bold text-sm group-link">

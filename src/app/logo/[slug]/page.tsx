@@ -9,36 +9,10 @@ import LogoSearch from '@/components/LogoSearch';
 import LogoCard from '@/components/LogoCard';
 import CategoryList from '@/components/CategoryList';
 import { Metadata } from 'next';
-import { fetchGraphQL } from '@/lib/graphql';
+
 
 // Rendered on-demand via Cloudflare's edge network on every request.
 
-
-const GET_LOGO_BY_SLUG = `
-  query GetLogoBySlug($slug: ID!) {
-    logo(id: $slug, idType: SLUG) {
-      id
-      databaseId
-      title
-      content
-      slug
-      excerpt
-      featuredImage {
-        node {
-          sourceUrl
-          altText
-        }
-      }
-      logoCategories {
-        nodes {
-          id
-          name
-          slug
-        }
-      }
-    }
-  }
-`;
 
 interface LogoNode {
     id: string;
@@ -64,14 +38,6 @@ interface LogoNode {
 
 const getLogoBySlug = cache(async (slug: string) => {
     try {
-        const data: { logo?: LogoNode } | null = await fetchGraphQL(GET_LOGO_BY_SLUG, { slug });
-        if (data && data.logo) {
-            return data.logo;
-        }
-        throw new Error("GraphQL returned empty data.");
-    } catch (e) {
-        console.error('Error fetching logo via GraphQL:', e);
-        // Fallback to REST only if GraphQL fails
         const logos = await fetchREST(`logo?slug=${slug}&_embed&_fields=id,title,content,slug,excerpt,_links,_embedded`);
         if (!logos || logos.length === 0) return null;
 
@@ -97,6 +63,9 @@ const getLogoBySlug = cache(async (slug: string) => {
                 }))
             }
         } as LogoNode;
+    } catch (e) {
+        console.error('Error fetching logo via REST:', e);
+        return null;
     }
 });
 

@@ -1,6 +1,5 @@
 export const dynamic = 'force-dynamic';
 import { fetchREST, fetchRESTWithMeta } from '@/lib/rest';
-import { fetchGraphQL } from '@/lib/graphql';
 import Link from 'next/link';
 import { Play, Music2, Headphones, Sparkles } from 'lucide-react';
 import DmcaCard from '@/components/DmcaCard';
@@ -27,36 +26,9 @@ interface Album {
     };
 }
 
-const GET_MUSIC_DATA = `
-  query GetMusicArchive($offset: Int, $size: Int) {
-    playlists: srPlaylists(where: { offsetPagination: { offset: $offset, size: $size } }) {
-      pageInfo {
-        offsetPagination {
-          total
-        }
-      }
-      nodes {
-        databaseId
-        title
-        slug
-        excerpt
-        featuredImage {
-          node {
-            sourceUrl
-          }
-        }
-      }
-    }
-    page(id: "/album/", idType: URI) {
-        title
-        excerpt
-    }
-  }
-`;
-
-interface MusicData {
-    playlists: { nodes: any[], pageInfo: { offsetPagination: { total: number } } };
-    page: { title: string; excerpt?: string } | null;
+interface RESTPage {
+    title: { rendered: string };
+    excerpt: { rendered: string };
 }
 
 export default async function AlbumArchive({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
@@ -70,41 +42,24 @@ export default async function AlbumArchive({ searchParams }: { searchParams: Pro
     let totalPages = 1;
 
     try {
-        const offset = (page - 1) * perPage;
-        const [gqlData, seo] = await Promise.all([
-            fetchGraphQL<MusicData>(GET_MUSIC_DATA, { offset, size: perPage }),
+        const [res, pageData, seo] = await Promise.all([
+            fetchRESTWithMeta(`sr_playlist?per_page=12&page=${page}&_embed&_fields=id,title,slug,excerpt,_links,_embedded`),
+            fetchREST('pages?slug=album&_fields=title,excerpt'),
             fetchRankMathSEO('https://bootflare.com/album/')
         ]);
 
-        if (gqlData && gqlData.playlists) {
-            albums = gqlData.playlists.nodes.map(node => ({
-                id: node.databaseId,
-                title: { rendered: node.title },
-                slug: node.slug,
-                excerpt: { rendered: node.excerpt },
-                _embedded: {
-                    'wp:featuredmedia': node.featuredImage ? [{ source_url: node.featuredImage.node.sourceUrl }] : []
-                }
-            }));
-            totalPages = Math.ceil(gqlData.playlists.pageInfo.offsetPagination.total / perPage);
-            wpData = { page: gqlData.page || { title: 'High-Quality Music Albums' } };
+        albums = res.data;
+        totalPages = res.totalPages;
+
+        if (pageData && Array.isArray(pageData) && pageData.length > 0) {
+            wpData = { page: { title: pageData[0].title.rendered, excerpt: pageData[0].excerpt.rendered } };
         } else {
-            throw new Error('Albums not found via GraphQL, triggering fallback');
+            wpData = { page: { title: 'High-Quality Music Albums' } };
         }
+
         seoData = seo;
     } catch (error) {
-        console.warn('GraphQL failed for AlbumArchive, falling back to REST:', error);
-        try {
-            const [res, seo] = await Promise.all([
-                fetchRESTWithMeta(`sr_playlist?per_page=12&page=${page}&_embed`),
-                fetchRankMathSEO('https://bootflare.com/album/')
-            ]);
-            albums = res.data;
-            totalPages = res.totalPages;
-            seoData = seo;
-        } catch (e) {
-            console.error('Final REST fallback failed:', e);
-        }
+        console.error('Error fetching AlbumArchive via REST:', error);
     }
 
     const description = seoData?.description

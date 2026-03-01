@@ -1,5 +1,5 @@
 export const revalidate = 86400; // 24 hours
-import { fetchGraphQL } from '@/lib/graphql';
+
 import { internalizeLinks, stripScripts } from '@/lib/sanitize';
 import { Calendar, User, ArrowLeft, Clock, AlertTriangle, MessageCircle, Facebook, Twitter, Linkedin } from 'lucide-react';
 import Link from 'next/link';
@@ -13,124 +13,46 @@ import ArticleContent from '@/components/ArticleContent';
 export const dynamicParams = true;
 export const dynamic = 'force-dynamic';
 
-const GET_POST_BY_SLUG = `
-  query GetPostBySlug($slug: ID!) {
-    post(id: $slug, idType: SLUG) {
-      id
-      databaseId
-      title
-      content
-      excerpt
-      slug
-      date
-      featuredImage {
-        node {
-          sourceUrl
-        }
-      }
-      author {
-        node {
-          name
-          avatar {
-            url
-          }
-        }
-      }
-      categories {
-        nodes {
-          name
-          slug
-        }
-      }
-      comments(first: 50, where: { order: ASC }) {
-        nodes {
-          id
-          databaseId
-          content
-          date
-          author {
-            node {
-              name
-              avatar {
-                url
-              }
-            }
-          }
-          parentId
-        }
-      }
-    }
-  }
-`;
+import { fetchREST, getRESTPostBySlug, getRESTComments } from '@/lib/rest';
 
-interface GQLComment {
-  id: string;
-  databaseId: number;
-  content: string;
+interface RESTComment {
+  id: number;
+  content: { rendered: string };
   date: string;
-  author: {
-    node: {
-      name: string;
-      avatar?: {
-        url: string;
-      };
-    };
+  author_name: string;
+  author_avatar_urls?: {
+    [key: string]: string;
   };
-  parentId: string | null;
+  parent: number;
 }
 
-interface GQLPost {
-  id: string;
-  databaseId: number;
-  title: string;
-  content: string;
-  excerpt: string;
+interface RESTPost {
+  id: number;
+  title: { rendered: string };
+  content: { rendered: string };
+  excerpt: { rendered: string };
   slug: string;
   date: string;
-  featuredImage?: {
-    node: {
-      sourceUrl: string;
-    };
-  };
-  author?: {
-    node: {
-      name: string;
-      avatar?: {
-        url: string;
-      };
-    };
-  };
-  categories?: {
-    nodes: {
-      name: string;
-      slug: string;
-    }[];
-  };
-  comments?: {
-    nodes: GQLComment[];
+  _embedded?: {
+    'wp:featuredmedia'?: { source_url: string }[];
+    'author'?: { name: string; avatar_urls?: { [key: string]: string } }[];
+    'wp:term'?: { name: string; slug: string }[][];
   };
 }
 
 const getPostBySlug = cache(async (slug: string) => {
-  const data: { post?: GQLPost | null } | null = await fetchGraphQL(GET_POST_BY_SLUG, { slug });
-  return data?.post || null;
+  return await getRESTPostBySlug(slug);
 });
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
   try {
-    const post = await getPostBySlug(slug);
+    const post = await getPostBySlug(slug) as RESTPost;
     if (post) {
       const seo = await fetchRankMathSEO(`https://bootflare.com/${slug}/`);
       if (seo) return mapRankMathToMetadata(seo);
 
-      return mapWPToMetadata({
-        title: { rendered: post.title },
-        excerpt: { rendered: post.excerpt },
-        _embedded: {
-          'wp:featuredmedia': post.featuredImage ? [{ source_url: post.featuredImage.node.sourceUrl }] : []
-        }
-      } as any, 'Blog | Bootflare');
+      return mapWPToMetadata(post as any, 'Blog | Bootflare');
     }
   } catch (error) {
     console.error('Error generating metadata for blog post:', error);
@@ -140,11 +62,15 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
 export default async function BlogPost({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  let post: GQLPost | null = null;
+  let post: RESTPost | null = null;
+  let comments: RESTComment[] = [];
   let errorOccurred = false;
 
   try {
-    post = await getPostBySlug(slug);
+    post = await getPostBySlug(slug) as RESTPost;
+    if (post) {
+      comments = await getRESTComments(post.id) as RESTComment[];
+    }
   } catch (error) {
     console.error('Error fetching post:', error);
     errorOccurred = true;
@@ -174,11 +100,11 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
     notFound();
   }
 
-  const sanitizedContent = internalizeLinks(stripScripts(post.content));
-  const categories = post.categories?.nodes || [];
-  const authorName = post.author?.node?.name || "Bootflare Editorial";
-  const authorAvatar = post.author?.node?.avatar?.url;
-  const featuredImage = post.featuredImage?.node?.sourceUrl;
+  const sanitizedContent = internalizeLinks(stripScripts(post.content.rendered));
+  const categories = post._embedded?.['wp:term']?.[0] || [];
+  const authorName = post._embedded?.author?.[0]?.name || "Bootflare Editorial";
+  const authorAvatar = post._embedded?.author?.[0]?.avatar_urls?.['96'];
+  const featuredImage = post._embedded?.['wp:featuredmedia']?.[0]?.source_url;
   const shareUrl = `https://bootflare.com/${post.slug}/`;
 
   return (
@@ -191,7 +117,7 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
         <div className="max-w-4xl mx-auto">
           {/* Meta */}
           <div className="flex flex-wrap items-center gap-4 mb-8">
-            {categories.map(cat => (
+            {categories.map((cat: any) => (
               <Link key={cat.slug} href={`/category/${cat.slug}`} prefetch={false} className="text-[10px] font-bold text-primary uppercase tracking-widest px-3 py-1 bg-primary/10 rounded-full hover:bg-primary hover:text-white transition-all">
                 {cat.name}
               </Link>
@@ -208,12 +134,12 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
 
           <h1
             className="text-4xl md:text-6xl font-bold mb-12 leading-tight text-slate-900 font-ubuntu"
-            dangerouslySetInnerHTML={{ __html: post.title }}
+            dangerouslySetInnerHTML={{ __html: post.title.rendered }}
           />
 
           {featuredImage && (
             <div className="mb-20 rounded-[3rem] overflow-hidden shadow-2xl shadow-slate-200 border-8 border-white ring-1 ring-slate-100">
-              <img src={featuredImage} alt={post.title} className="w-full h-auto" />
+              <img src={featuredImage} alt={post.title.rendered} className="w-full h-auto" />
             </div>
           )}
 
@@ -231,8 +157,8 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
                   <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-6">Published By</h4>
                   <div className="flex items-center gap-4">
                     {authorAvatar ? (
-                      <img 
-                        src={authorAvatar} 
+                      <img
+                        src={authorAvatar}
                         alt={authorName}
                         className="w-12 h-12 rounded-full object-cover"
                       />
@@ -252,7 +178,7 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
                 <div>
                   <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-6">Spread the knowledge</h4>
                   <div className="flex gap-3">
-                    <a 
+                    <a
                       href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`}
                       target="_blank"
                       rel="noopener noreferrer"
@@ -261,8 +187,8 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
                     >
                       <Facebook className="w-4 h-4" />
                     </a>
-                    <a 
-                      href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(post.title)}`}
+                    <a
+                      href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(post.title.rendered)}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 hover:bg-black hover:text-white transition-all"
@@ -270,8 +196,8 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
                     >
                       <Twitter className="w-4 h-4" />
                     </a>
-                    <a 
-                      href={`https://www.linkedin.com/shareArticle?mini=true&url=${encodeURIComponent(shareUrl)}&title=${encodeURIComponent(post.title)}`}
+                    <a
+                      href={`https://www.linkedin.com/shareArticle?mini=true&url=${encodeURIComponent(shareUrl)}&title=${encodeURIComponent(post.title.rendered)}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 hover:bg-[#0A66C2] hover:text-white transition-all"
@@ -286,19 +212,19 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
           </div>
 
           {/* Comments Section */}
-          <CommentsSection comments={post.comments?.nodes || []} postId={post.databaseId} />
+          <CommentsSection comments={comments} postId={post.id} />
         </div>
       </div>
     </article>
   );
 }
 
-function CommentsSection({ comments, postId }: { comments: GQLComment[]; postId: number }) {
-  const rootComments = comments.filter(c => !c.parentId);
-  const childComments = comments.filter(c => c.parentId);
+function CommentsSection({ comments, postId }: { comments: RESTComment[]; postId: number }) {
+  const rootComments = comments.filter(c => c.parent === 0);
+  const childComments = comments.filter(c => c.parent !== 0);
 
-  const getChildComments = (parentId: string) => 
-    childComments.filter(c => c.parentId === parentId);
+  const getChildComments = (parentId: number) =>
+    childComments.filter(c => c.parent === parentId);
 
   if (comments.length === 0) {
     return (
@@ -331,23 +257,23 @@ function CommentsSection({ comments, postId }: { comments: GQLComment[]; postId:
   );
 }
 
-function CommentItem({ 
-  comment, 
-  replies, 
+function CommentItem({
+  comment,
+  replies,
   getChildComments,
-  depth = 0 
-}: { 
-  comment: GQLComment; 
-  replies: GQLComment[];
-  getChildComments: (parentId: string) => GQLComment[];
+  depth = 0
+}: {
+  comment: RESTComment;
+  replies: RESTComment[];
+  getChildComments: (parentId: number) => RESTComment[];
   depth?: number;
 }) {
-  const authorName = comment.author?.node?.name || 'Anonymous';
-  const avatarUrl = comment.author?.node?.avatar?.url;
-  const date = new Date(comment.date).toLocaleDateString(undefined, { 
-    month: 'short', 
-    day: 'numeric', 
-    year: 'numeric' 
+  const authorName = comment.author_name || 'Anonymous';
+  const avatarUrl = comment.author_avatar_urls?.['96'];
+  const date = new Date(comment.date).toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric'
   });
 
   return (
@@ -355,8 +281,8 @@ function CommentItem({
       <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
         <div className="flex items-start gap-4">
           {avatarUrl ? (
-            <img 
-              src={avatarUrl} 
+            <img
+              src={avatarUrl}
               alt={authorName}
               className="w-12 h-12 rounded-full object-cover flex-shrink-0"
             />
@@ -370,24 +296,24 @@ function CommentItem({
               <span className="font-bold text-slate-900">{authorName}</span>
               <span className="text-xs text-slate-400">{date}</span>
             </div>
-            <div 
+            <div
               className="text-slate-600 prose prose-sm max-w-none [&_p]:mb-2 [&_p:last-child]:mb-0"
-              dangerouslySetInnerHTML={{ __html: comment.content }}
+              dangerouslySetInnerHTML={{ __html: comment.content.rendered }}
             />
           </div>
         </div>
       </div>
-      
+
       {/* Nested replies */}
       {replies.length > 0 && (
         <div className="mt-4 space-y-4">
           {replies.map(reply => (
-            <CommentItem 
-              key={reply.id} 
-              comment={reply} 
+            <CommentItem
+              key={reply.id}
+              comment={reply}
               replies={getChildComments(reply.id)}
               getChildComments={getChildComments}
-              depth={depth + 1} 
+              depth={depth + 1}
             />
           ))}
         </div>

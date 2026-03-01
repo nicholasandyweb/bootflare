@@ -1,6 +1,5 @@
 export const revalidate = 3600; // 1 hour
 import { fetchREST, fetchRESTWithMeta } from '@/lib/rest';
-import { fetchGraphQL } from '@/lib/graphql';
 import Link from 'next/link';
 import { Play, Headphones, Music2, Sparkles } from 'lucide-react';
 import DmcaCard from '@/components/DmcaCard';
@@ -27,40 +26,14 @@ interface Album {
   };
 }
 
-const GET_MUSIC_DATA = `
-  query GetMusicArchive($offset: Int, $size: Int) {
-    playlists: srPlaylists(where: { offsetPagination: { offset: $offset, size: $size } }) {
-      pageInfo {
-        offsetPagination {
-          total
-        }
-      }
-      nodes {
-        databaseId
-        title
-        slug
-        excerpt
-        featuredImage {
-          node {
-            sourceUrl
-          }
-        }
-      }
-    }
-    page(id: "/royalty-free-music/", idType: URI) {
-        title
-        excerpt
-    }
-  }
-`;
-
-interface MusicData {
-  playlists: { nodes: any[], pageInfo: { offsetPagination: { total: number } } };
-  page: { title: string; excerpt?: string } | null;
+interface RESTPage {
+  title: { rendered: string };
+  excerpt: { rendered: string };
 }
 
-export default async function RoyaltyFreeMusicArchive() {
-  const page = 1;
+export default async function RoyaltyFreeMusicArchive({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
+  const sp = await searchParams;
+  const page = parseInt(sp.page || '1', 10);
   const perPage = 12;
 
   let albums: any[] = [];
@@ -69,13 +42,9 @@ export default async function RoyaltyFreeMusicArchive() {
   let totalPages = 1;
 
   try {
-    const offset = (page - 1) * perPage;
-
-    // HYBRID APPROACH:
-    // 1. Use REST for paginated lists (due to missing offsetPagination plugin)
-    // 2. Use GraphQL for metadata/SEO
-    const [restResult, seo] = await Promise.all([
+    const [restResult, pageData, seo] = await Promise.all([
       fetchRESTWithMeta(`sr_playlist?per_page=12&page=${page}&_embed&_fields=id,title,slug,excerpt,_links,_embedded`),
+      fetchREST('pages?slug=royalty-free-music&_fields=title,excerpt'),
       fetchRankMathSEO('https://bootflare.com/royalty-free-music/')
     ]);
 
@@ -83,19 +52,13 @@ export default async function RoyaltyFreeMusicArchive() {
     totalPages = restResult?.totalPages || 1;
     seoData = seo;
 
-    // Optional: Fetch page title/excerpt via GraphQL if needed
-    const pageMeta = await fetchGraphQL<{ page: { title: string; excerpt?: string } }>(`
-      query GetMusicPageMeta {
-        page(id: "/royalty-free-music/", idType: URI) {
-          title
-          excerpt
-        }
-      }
-    `).catch(() => null);
-
-    wpData = { page: pageMeta?.page || { title: 'Royalty Free Music' } };
+    if (pageData && Array.isArray(pageData) && pageData.length > 0) {
+      wpData = { page: { title: pageData[0].title.rendered, excerpt: pageData[0].excerpt.rendered } };
+    } else {
+      wpData = { page: { title: 'Royalty Free Music' } };
+    }
   } catch (error) {
-    console.error('Hybrid fetching failed for RoyaltyFreeMusic:', error);
+    console.error('Error fetching RoyaltyFreeMusic via REST:', error);
   }
 
 
