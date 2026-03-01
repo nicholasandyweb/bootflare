@@ -52,7 +52,6 @@ async function _doFetchREST(url: string, retries: number): Promise<any> {
                     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                     'Accept': 'application/json',
                 },
-                cache: 'no-store',
                 signal: controller.signal
             });
             clearTimeout(timeoutId);
@@ -113,9 +112,9 @@ export async function fetchREST(endpoint: string, retries = 1, namespace = 'wp/v
         return result;
     }
 
-    // Production: do NOT use Next.js Data Cache here.
-    // This fetch sends `cache: 'no-store'` which tells the router worker to bypass
-    // its edge cache (120s TTL) so SSR always gets fresh WP data.
+    // Production: use the router worker's 120s edge cache for WP REST responses.
+    // The router blocks caching of empty/error responses, so stale data from
+    // a previously healthy WP request is served when WP is slow or 503ing.
     return await _doFetchREST(url, retries);
 }
 
@@ -130,7 +129,6 @@ async function _doFetchRESTWithMeta(url: string, retries: number): Promise<any> 
                     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                     'Accept': 'application/json',
                 },
-                cache: 'no-store',
                 signal: controller.signal
             });
             clearTimeout(timeoutId);
@@ -195,9 +193,7 @@ export async function fetchRESTWithMeta(endpoint: string, retries = 1, namespace
         return result;
     }
 
-    // Production: do NOT use Next.js Data Cache here.
-    // Uses `cache: 'no-store'` so the router worker bypasses its edge cache
-    // and Next.js always receives fresh WP data.
+    // Production: use the router worker's 120s edge cache.
     return await _doFetchRESTWithMeta(url, retries);
 }
 
