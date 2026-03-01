@@ -182,6 +182,19 @@ export default {
 
         // ── Health probe: hits WP + Next.js and reports latency/status ─
         if (pathname === '/__health') {
+            const cache = caches.default;
+            const useHealthCache = request.method === 'GET' && !url.searchParams.has('nocache');
+            const healthCacheKey = new Request(url.toString(), { method: 'GET' });
+
+            if (useHealthCache) {
+                const cached = await cache.match(healthCacheKey);
+                if (cached) {
+                    const resp = new Response(cached.body, cached);
+                    resp.headers.set('X-Health-Cache', 'HIT');
+                    return resp;
+                }
+            }
+
             const started = Date.now();
             const originHost = getOriginUrlHost(env);
             const results = {
@@ -253,9 +266,21 @@ export default {
             }
 
             results.msTotal = Date.now() - started;
-            return new Response(JSON.stringify(results, null, 2), {
-                headers: { 'Content-Type': 'application/json' },
+
+            const body = JSON.stringify(results, null, 2);
+            const resp = new Response(body, {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Cache-Control': useHealthCache ? 'public, s-maxage=60' : 'no-store',
+                },
             });
+
+            if (useHealthCache) {
+                resp.headers.set('X-Health-Cache', 'MISS');
+                ctx.waitUntil(cache.put(healthCacheKey, resp.clone()));
+            }
+
+            return resp;
         }
 
         stats.totalRequests++;

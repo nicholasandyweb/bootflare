@@ -128,5 +128,15 @@ export async function fetchGraphQL<T>(query: string, variables?: Record<string, 
   // window are served instantly without hitting the WordPress GraphQL endpoint.
   // POST requests are NOT cached by Next.js fetch natively, so we use
   // unstable_cache with a stable module-level reference.
-  return _cachedFetch(query, variablesJson, retries) as Promise<T>;
+
+  // NOTE: If we ever cache a transient failure (null), it can poison pages with
+  // fallback data for the entire revalidate window. To avoid that, if the cached
+  // result is null, we attempt one direct (uncached) fetch.
+  const cachedResult = await _cachedFetch(query, variablesJson, retries);
+  if (cachedResult === null) {
+    const directResult = await _doFetch(query, variablesJson, Math.max(retries, 2));
+    return directResult as T;
+  }
+
+  return cachedResult as T;
 }
