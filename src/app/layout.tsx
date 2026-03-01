@@ -4,9 +4,6 @@ import "./globals.css";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 
-// Ensure pages don't get stuck serving stale "fallback" HTML across reloads.
-export const dynamic = 'force-dynamic';
-
 const montserrat = Montserrat({
   variable: "--font-montserrat",
   subsets: ["latin"],

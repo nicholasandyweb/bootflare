@@ -150,7 +150,8 @@ function withTimeout(promise, ms) {
 }
 
 function serviceUnavailable(reason) {
-    return new Response('Service Unavailable', {
+    const message = reason ? `Service Unavailable (${reason})` : 'Service Unavailable';
+    return new Response(message, {
         status: 503,
         headers: {
             'Content-Type': 'text/plain;charset=UTF-8',
@@ -439,11 +440,25 @@ export default {
         inFlightToNextJs++;
         let response;
         try {
-            response = await withTimeout(nextjsWorker.fetch(request), 15000); // 15s max
+            // Cold starts or heavier pages can exceed 15s; allow more headroom.
+            response = await withTimeout(nextjsWorker.fetch(request), 30000); // 30s max
         } catch (err) {
             inFlightToNextJs--;
-            console.error('Next.js Worker timeout or error:', err?.message || String(err));
-            return serviceUnavailable('nextjs_timeout');
+            const msg = err?.message || String(err);
+            console.error('Next.js Worker timeout or error:', msg);
+
+            // Distinguish timeout from other failures for easier debugging.
+            if (msg === 'TIMEOUT') return serviceUnavailable('nextjs_timeout');
+
+            // Retry once on transient errors.
+            try {
+                response = await withTimeout(nextjsWorker.fetch(request), 30000);
+            } catch (err2) {
+                const msg2 = err2?.message || String(err2);
+                console.error('Next.js Worker retry failed:', msg2);
+                if (msg2 === 'TIMEOUT') return serviceUnavailable('nextjs_timeout');
+                return serviceUnavailable('nextjs_error');
+            }
         }
         inFlightToNextJs--;
 
