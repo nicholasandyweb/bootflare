@@ -100,9 +100,10 @@ async function _doFetchREST(url: string, retries: number): Promise<any> {
 }
 
 export async function fetchREST(endpoint: string, retries = 1, namespace = 'wp/v2') {
-    const separator = endpoint.includes('?') ? '&' : '?';
-    const embedParam = endpoint.includes('_embed') ? '' : `${separator}_embed`;
-    const url = endpoint.startsWith('http') ? endpoint : `${WP_URL}/wp-json/${namespace}/${endpoint}${embedParam}`;
+    // Callers must opt in to _embed explicitly — auto-adding it forces WP to run
+    // expensive joined queries (author, media, terms) on every request, which
+    // overwhelms shared hosting and causes 503s.
+    const url = endpoint.startsWith('http') ? endpoint : `${WP_URL}/wp-json/${namespace}/${endpoint}`;
 
     if (process.env.NODE_ENV === 'development') {
         const cached = devCache.get(url);
@@ -183,9 +184,8 @@ async function _doFetchRESTWithMeta(url: string, retries: number): Promise<any> 
 }
 
 export async function fetchRESTWithMeta(endpoint: string, retries = 1, namespace = 'wp/v2') {
-    const separator = endpoint.includes('?') ? '&' : '?';
-    const embedParam = endpoint.includes('_embed') ? '' : `${separator}_embed`;
-    const url = endpoint.startsWith('http') ? endpoint : `${WP_URL}/wp-json/${namespace}/${endpoint}${embedParam}`;
+    // No auto-_embed — callers opt in explicitly.
+    const url = endpoint.startsWith('http') ? endpoint : `${WP_URL}/wp-json/${namespace}/${endpoint}`;
 
     if (process.env.NODE_ENV === 'development') {
         const cached = devCache.get(url);

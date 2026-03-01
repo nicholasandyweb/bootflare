@@ -22,8 +22,8 @@ export default async function Home() {
 
   try {
     const [logosData, musicData] = await Promise.all([
-      fetchREST('logo?per_page=20&_fields=id,_links,_embedded', 2),
-      fetchREST('sr_playlist?per_page=10&_fields=id,_links,_embedded', 2)
+      fetchREST('logo?per_page=20&_embed&_fields=id,_links,_embedded', 2),
+      fetchREST('sr_playlist?per_page=10&_embed&_fields=id,_links,_embedded', 2)
     ]);
 
     if (logosData && Array.isArray(logosData)) {
