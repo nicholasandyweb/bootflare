@@ -149,14 +149,17 @@ function withTimeout(promise, ms) {
     });
 }
 
-/** Minimal HTML error page served when Next.js is overloaded or timing out */
-const OVERLOADED_HTML = `<!DOCTYPE html><html><head><meta charset="utf-8">
-<title>bootflare.com</title>
-<meta http-equiv="refresh" content="5">
-<style>body{font-family:system-ui;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;background:#f8f9fa}
-.c{text-align:center;max-width:420px}.s{animation:spin 1s linear infinite;width:32px;height:32px;border:3px solid #e2e8f0;border-top-color:#3b82f6;border-radius:50%;margin:0 auto 16px}
-@keyframes spin{to{transform:rotate(360deg)}}</style></head>
-<body><div class="c"><div class="s"></div><h2>Loading&hellip;</h2><p>The page is warming up. It will auto-retry in a few seconds.</p></div></body></html>`;
+function serviceUnavailable(reason) {
+    return new Response('Service Unavailable', {
+        status: 503,
+        headers: {
+            'Content-Type': 'text/plain;charset=UTF-8',
+            'Retry-After': '5',
+            'Cache-Control': 'no-store',
+            ...(reason ? { 'X-Router-Error': reason } : {}),
+        },
+    });
+}
 
 export default {
     async fetch(request, env, ctx) {
@@ -398,15 +401,8 @@ export default {
 
         // ── Concurrency gate — shed load before overwhelming Next.js / WP ──
         if (inFlightToNextJs >= MAX_CONCURRENT_NEXTJS) {
-            // Too many in-flight SSR requests; return a friendly auto-retry page
-            return new Response(OVERLOADED_HTML, {
-                status: 503,
-                headers: {
-                    'Content-Type': 'text/html;charset=UTF-8',
-                    'Retry-After': '5',
-                    'Cache-Control': 'no-store',
-                },
-            });
+            // Too many in-flight SSR requests
+            return serviceUnavailable('nextjs_concurrency');
         }
 
         // --- Cache Logic ---
@@ -446,15 +442,8 @@ export default {
             response = await withTimeout(nextjsWorker.fetch(request), 15000); // 15s max
         } catch (err) {
             inFlightToNextJs--;
-            console.error('Next.js Worker timeout or error:', err.message);
-            return new Response(OVERLOADED_HTML, {
-                status: 503,
-                headers: {
-                    'Content-Type': 'text/html;charset=UTF-8',
-                    'Retry-After': '5',
-                    'Cache-Control': 'no-store',
-                },
-            });
+            console.error('Next.js Worker timeout or error:', err?.message || String(err));
+            return serviceUnavailable('nextjs_timeout');
         }
         inFlightToNextJs--;
 
