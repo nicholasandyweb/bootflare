@@ -189,6 +189,7 @@ export default {
                 version: ROUTER_VERSION,
                 now: new Date().toISOString(),
                 wpMode: (originHost && originHost !== 'INVALID_ORIGIN_URL' && originHost !== DEFAULT_WP_RESOLVE_OVERRIDE) ? 'origin_url' : 'resolve_override',
+                originHost,
                 cf: {
                     colo: request.cf?.colo,
                     asn: request.cf?.asn,
@@ -218,13 +219,14 @@ export default {
             // WP JSON probe (direct origin)
             try {
                 const t0 = Date.now();
-                const res = await withTimeout(fetch(getWpTargetUrl('https://bootflare.com/wp-json/', env), {
+                const wpJsonUrl = getWpTargetUrl('https://bootflare.com/wp-json/', env);
+                const res = await withTimeout(fetch(wpJsonUrl, {
                     headers: { 'User-Agent': 'bootflare-router-healthcheck' },
                     cf: getWpCfOptions(env),
                 }), 12000);
                 const ct = res.headers.get('content-type') || '';
                 const body = await res.text();
-                results.wpJson = { status: res.status, ms: Date.now() - t0, contentType: ct, snippet: clampSnippet(body) };
+                results.wpJson = { url: wpJsonUrl, status: res.status, ms: Date.now() - t0, contentType: ct, snippet: clampSnippet(body) };
             } catch (e) {
                 results.wpJson = { error: e?.message || String(e) };
             }
@@ -232,7 +234,8 @@ export default {
             // WP GraphQL probe (direct origin)
             try {
                 const t0 = Date.now();
-                const res = await withTimeout(fetch(getWpTargetUrl('https://bootflare.com/graphql', env), {
+                const wpGraphqlUrl = getWpTargetUrl('https://bootflare.com/graphql', env);
+                const res = await withTimeout(fetch(wpGraphqlUrl, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -244,7 +247,7 @@ export default {
                 }), 12000);
                 const ct = res.headers.get('content-type') || '';
                 const body = await res.text();
-                results.wpGraphql = { status: res.status, ms: Date.now() - t0, contentType: ct, snippet: clampSnippet(body) };
+                results.wpGraphql = { url: wpGraphqlUrl, status: res.status, ms: Date.now() - t0, contentType: ct, snippet: clampSnippet(body) };
             } catch (e) {
                 results.wpGraphql = { error: e?.message || String(e) };
             }
