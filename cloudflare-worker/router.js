@@ -63,14 +63,20 @@ const HONEYPOT_PATHS = [
 let inFlightToNextJs = 0;
 const MAX_CONCURRENT_NEXTJS = 50; // Max in-flight requests to Next.js per isolate
 
+// ── Stats (per-isolate, resets on cold start) ───────────────────────────
+const stats = { apiCacheHit: 0, apiCacheMiss: 0, pageCacheHit: 0, pageCacheMiss: 0, botBlocked: 0, totalRequests: 0 };
+
+const ROUTER_VERSION = '2026-03-01-origin-direct-cachekeys';
+
 /**
  * Returns true if the request looks like a bad bot.
  */
 function isSuspiciousRequest(request) {
     const ua = (request.headers.get('User-Agent') || '').toLowerCase();
 
-    // No User-Agent at all — almost always a bot/scanner
-    if (!ua) return true;
+    // NOTE: Requests originating from other Workers (service bindings / SSR subrequests)
+    // may legitimately have no User-Agent. Don't block solely on that.
+    if (!ua) return false;
 
     // Known bad bots
     if (BAD_BOT_PATTERNS.some(p => ua.includes(p))) return true;
@@ -110,15 +116,20 @@ export default {
         if (pathname === '/__debug') {
             return new Response(JSON.stringify({
                 router: 'active',
+                version: ROUTER_VERSION,
                 hasServiceBinding: !!env.NEXTJS_WORKER,
                 hasOriginUrl: !!env.ORIGIN_URL,
                 host: request.headers.get('Host'),
                 pathname,
                 url: request.url,
+                inFlight: inFlightToNextJs,
+                stats,
             }, null, 2), {
                 headers: { 'Content-Type': 'application/json' }
             });
         }
+
+        stats.totalRequests++;
 
         // ── Block honeypot paths immediately ─────────────────────────
         if (HONEYPOT_PATHS.some(p => pathname === p || pathname.startsWith(p + '/'))) {
@@ -132,6 +143,7 @@ export default {
         // ── Block obvious bad bots ───────────────────────────────────
         if (isSuspiciousRequest(request)) {
             // Return a minimal 403 — costs essentially zero CPU
+            stats.botBlocked++;
             return new Response('Forbidden', { status: 403 });
         }
 
@@ -164,16 +176,19 @@ export default {
 
                         const cacheUrl = new URL(request.url);
                         cacheUrl.searchParams.set('__gql_hash', hashHex);
-                        cacheKey = new Request(cacheUrl.toString(), {
-                            method: 'GET', // Use GET for the cache key
-                            headers: request.headers
-                        });
+                        // Cache key must NOT include original request headers (Cookie, UA, etc.)
+                        // otherwise every visitor gets a unique cache key and the cache never hits
+                        cacheKey = new Request(cacheUrl.toString(), { method: 'GET' });
+                    } else {
+                        // GET requests: use URL only, strip varying headers
+                        cacheKey = new Request(request.url, { method: 'GET' });
                     }
 
                     const cachedResponse = await cache.match(cacheKey);
                     if (cachedResponse) {
                         const response = new Response(cachedResponse.body, cachedResponse);
                         response.headers.set('X-API-Cache', 'HIT');
+                        stats.apiCacheHit++;
                         return response;
                     }
                 } catch (e) {
@@ -181,14 +196,16 @@ export default {
                 }
             }
 
-            const response = await fetch(request.url, {
+            // IMPORTANT: Fetch origin-wp directly to avoid any possibility of worker-route recursion
+            // when this router is bound to bootflare.com/*.
+            const originUrl = new URL(request.url);
+            originUrl.hostname = 'origin-wp.bootflare.com';
+
+            const response = await fetch(originUrl.toString(), {
                 method: request.method,
                 headers: wpHeaders,
                 body: ['GET', 'HEAD'].includes(request.method) ? null : request.body,
                 redirect: 'manual',
-                cf: {
-                    resolveOverride: 'origin-wp.bootflare.com'
-                }
             });
 
             // Cache successful API responses that return actual JSON (not HTML bot challenges)
@@ -202,6 +219,7 @@ export default {
 
                 const newResponse = new Response(response.body, response);
                 newResponse.headers.set('X-API-Cache', 'MISS');
+                stats.apiCacheMiss++;
                 return newResponse;
             }
 
@@ -236,13 +254,12 @@ export default {
         let cacheUrl = new URL(request.url);
         let cacheKey;
         try {
-            cacheKey = new Request(cacheUrl.toString(), {
-                method: request.method,
-                headers: request.headers
-            });
+            // Cache key must NOT include original request headers (Cookie, UA, etc.)
+            // otherwise every visitor gets a unique cache key and the cache never hits
+            cacheKey = new Request(cacheUrl.toString(), { method: 'GET' });
         } catch (e) {
             console.error(`ERROR: Failed to construct cacheKey. cacheUrl: "${cacheUrl.toString()}"`);
-            cacheKey = request;
+            cacheKey = new Request(request.url, { method: 'GET' });
         }
 
         const useCache = isCacheableMethod && !url.searchParams.has('nocache');
@@ -252,6 +269,7 @@ export default {
             if (cachedResponse) {
                 const response = new Response(cachedResponse.body, cachedResponse);
                 response.headers.set('X-Worker-Cache', 'HIT');
+                stats.pageCacheHit++;
                 return response;
             }
         }
@@ -284,6 +302,7 @@ export default {
 
             response = new Response(responseToCache.body, responseToCache);
             response.headers.set('X-Worker-Cache', 'MISS');
+            stats.pageCacheMiss++;
         }
 
         return response;
