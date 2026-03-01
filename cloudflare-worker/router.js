@@ -66,7 +66,7 @@ const MAX_CONCURRENT_NEXTJS = 50; // Max in-flight requests to Next.js per isola
 // ── Stats (per-isolate, resets on cold start) ───────────────────────────
 const stats = { apiCacheHit: 0, apiCacheMiss: 0, pageCacheHit: 0, pageCacheMiss: 0, botBlocked: 0, totalRequests: 0 };
 
-const ROUTER_VERSION = '2026-03-01-health-ping';
+const ROUTER_VERSION = '2026-03-01-no-wpgraphql-probe';
 
 const DEFAULT_WP_RESOLVE_OVERRIDE = 'origin-wp.bootflare.com';
 
@@ -221,7 +221,6 @@ export default {
                 },
                 nextjs: null,
                 wpJson: null,
-                wpGraphql: null,
                 msTotal: 0,
             };
 
@@ -254,27 +253,6 @@ export default {
                 results.wpJson = { url: wpJsonUrl, status: res.status, ms: Date.now() - t0, contentType: ct, snippet: clampSnippet(body) };
             } catch (e) {
                 results.wpJson = { error: e?.message || String(e) };
-            }
-
-            // WP GraphQL probe (direct origin)
-            try {
-                const t0 = Date.now();
-                const wpGraphqlUrl = getWpTargetUrl('https://bootflare.com/graphql', env);
-                const res = await withTimeout(fetch(wpGraphqlUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json',
-                        'User-Agent': 'bootflare-router-healthcheck',
-                    },
-                    body: JSON.stringify({ query: 'query{__typename}' }),
-                    cf: getWpCfOptions(env),
-                }), 12000);
-                const ct = res.headers.get('content-type') || '';
-                const body = await res.text();
-                results.wpGraphql = { url: wpGraphqlUrl, status: res.status, ms: Date.now() - t0, contentType: ct, snippet: clampSnippet(body) };
-            } catch (e) {
-                results.wpGraphql = { error: e?.message || String(e) };
             }
 
             results.msTotal = Date.now() - started;
