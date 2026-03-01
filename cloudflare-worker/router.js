@@ -66,7 +66,14 @@ const MAX_CONCURRENT_NEXTJS = 50; // Max in-flight requests to Next.js per isola
 // ── Stats (per-isolate, resets on cold start) ───────────────────────────
 const stats = { apiCacheHit: 0, apiCacheMiss: 0, pageCacheHit: 0, pageCacheMiss: 0, botBlocked: 0, totalRequests: 0 };
 
-const ROUTER_VERSION = '2026-03-01-8s-timeout';
+const ROUTER_VERSION = '2026-03-01-swr-cache';
+
+// ── WP API cache settings ────────────────────────────────────────────────
+// "Fresh" window: serve from cache without revalidating (2 minutes)
+const SWR_FRESH_MS = 2 * 60 * 1000;
+// "Stale" window: keep cached entry alive even after it's stale (24 hours)
+// On WP slowness/503, stale data is FAR better than an empty fallback page.
+const SWR_STORE_AGE_S = 24 * 60 * 60;
 
 const DEFAULT_WP_RESOLVE_OVERRIDE = 'origin-wp.bootflare.com';
 
@@ -120,6 +127,36 @@ function getWpCfOptions(env) {
 }
 
 /**
+ * Background WP API cache refresh (stale-while-revalidate).
+ * Fetches the URL fresh from WP and updates the cache if the response is valid JSON.
+ * Called via ctx.waitUntil() so it never blocks the response path.
+ */
+async function refreshWpApiCache(cacheKey, wpTargetUrl, wpHeaders, cfOptions, cache) {
+    try {
+        const res = await withTimeout(fetch(wpTargetUrl, {
+            method: 'GET',
+            headers: wpHeaders,
+            redirect: 'manual',
+            cf: cfOptions,
+        }), 12000);
+
+        if (!res.ok) return;
+        const ct = res.headers.get('content-type') || '';
+        if (!ct.includes('application/json')) return;
+
+        const bodyText = await res.text();
+        if (bodyText.length <= 10) return; // don't cache empty [] or {}
+
+        const responseToCache = new Response(bodyText, res);
+        responseToCache.headers.set('Cache-Control', `public, s-maxage=${SWR_STORE_AGE_S}`);
+        responseToCache.headers.set('X-SWR-Fresh-Until', String(Date.now() + SWR_FRESH_MS));
+        await cache.put(cacheKey, responseToCache);
+    } catch (_e) {
+        // WP is slow/down — silently fail; stale entry continues being served.
+    }
+}
+
+/**
  * Returns true if the request looks like a bad bot.
  */
 function isSuspiciousRequest(request) {
@@ -163,6 +200,45 @@ function serviceUnavailable(reason) {
 }
 
 export default {
+    /**
+     * Scheduled handler — pre-warms the WP API cache every 2 minutes.
+     * This ensures key endpoints always have a fresh (or at worst stale) cached response,
+     * even when WP shared hosting is intermittently slow.
+     */
+    async scheduled(_event, env, ctx) {
+        const cache = caches.default;
+        const wpHeaders = {
+            'Host': 'bootflare.com',
+            'X-Forwarded-Host': 'bootflare.com',
+            'X-Forwarded-Proto': 'https',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'application/json',
+        };
+        const cfOptions = getWpCfOptions(env);
+
+        // Endpoints to pre-warm — these are the ones most likely to cause fallback on slow WP.
+        const endpoints = [
+            'posts?per_page=8&_embed=wp:featuredmedia,wp:term&_fields=id,title,slug,excerpt,date,_links,_embedded',
+            'logo?per_page=24&page=1&_embed&_fields=id,title,slug,_links,_embedded',
+        ];
+
+        for (const ep of endpoints) {
+            const publicUrl = `https://bootflare.com/wp-json/wp/v2/${ep}`;
+            const cacheKey = new Request(publicUrl, { method: 'GET' });
+            const targetUrl = getWpTargetUrl(publicUrl, env);
+
+            // Check if entry is already fresh — skip if so
+            const existing = await cache.match(cacheKey);
+            if (existing) {
+                const freshUntil = parseInt(existing.headers.get('X-SWR-Fresh-Until') || '0');
+                if (Date.now() < freshUntil) continue; // still fresh, nothing to do
+            }
+
+            // Fetch fresh from WP and update cache
+            ctx.waitUntil(refreshWpApiCache(cacheKey, targetUrl, wpHeaders, cfOptions, cache));
+        }
+    },
+
     async fetch(request, env, ctx) {
         const url = new URL(request.url);
         const { pathname } = url;
@@ -377,10 +453,28 @@ export default {
 
                     const cachedResponse = await cache.match(cacheKey);
                     if (cachedResponse) {
-                        const response = new Response(cachedResponse.body, cachedResponse);
-                        response.headers.set('X-API-Cache', 'HIT');
+                        const freshUntil = parseInt(cachedResponse.headers.get('X-SWR-Fresh-Until') || '0');
+                        const isStale = Date.now() > freshUntil;
+
+                        if (!isStale) {
+                            // Cache is fresh — serve immediately
+                            const response = new Response(cachedResponse.body, cachedResponse);
+                            response.headers.set('X-API-Cache', 'HIT');
+                            stats.apiCacheHit++;
+                            return response;
+                        }
+
+                        // Cache is stale — serve old data immediately and revalidate in background.
+                        // This means pages NEVER show fallback content just because WP is temporarily slow.
+                        if (request.method === 'GET') {
+                            const wpTargetUrl = getWpTargetUrl(request.url, env);
+                            ctx.waitUntil(refreshWpApiCache(cacheKey, wpTargetUrl, wpHeaders, getWpCfOptions(env), cache));
+                        }
+
+                        const staleResponse = new Response(cachedResponse.body, cachedResponse);
+                        staleResponse.headers.set('X-API-Cache', 'STALE');
                         stats.apiCacheHit++;
-                        return response;
+                        return staleResponse;
                     }
 
                     // Count a miss when we attempted cache lookup
@@ -408,14 +502,17 @@ export default {
             if (isApi && !bypassApiCache && response.ok && isJson && ['GET', 'POST'].includes(request.method)) {
                 try {
                     // Clone body to inspect content — don't cache empty arrays/objects
-                    // (WP returns [] when under load; caching that poisons the site for minutes)
+                    // (WP returns [] under load; caching that poisons the site)
                     const bodyText = await response.clone().text();
                     const isSubstantial = bodyText.length > 10; // more than [] or {}
 
                     if (isSubstantial) {
                         const responseToCache = new Response(bodyText, response);
-                        // 120s TTL — short enough that stale data self-heals quickly
-                        responseToCache.headers.set('Cache-Control', 'public, s-maxage=120');
+                        // Store for 24h so stale data is available during WP slow periods.
+                        // X-SWR-Fresh-Until tracks the 2-minute "fresh" window; after that,
+                        // stale data is served while the cache is refreshed in the background.
+                        responseToCache.headers.set('Cache-Control', `public, s-maxage=${SWR_STORE_AGE_S}`);
+                        responseToCache.headers.set('X-SWR-Fresh-Until', String(Date.now() + SWR_FRESH_MS));
                         ctx.waitUntil(cache.put(cacheKey, responseToCache));
                     }
 

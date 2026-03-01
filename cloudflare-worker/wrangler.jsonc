@@ -13,5 +13,10 @@
             "binding": "NEXTJS_WORKER",
             "service": "bootflare"
         }
-    ]
+    ],
+    "triggers": {
+        // Pre-warm the WP API cache every 2 minutes so blog/logo pages
+        // always have a fresh cached response even when WP is intermittently slow.
+        "crons": ["*/2 * * * *"]
+    }
 }
