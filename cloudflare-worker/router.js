@@ -68,6 +68,11 @@ const stats = { apiCacheHit: 0, apiCacheMiss: 0, pageCacheHit: 0, pageCacheMiss:
 
 const ROUTER_VERSION = '2026-03-01-origin-direct-cachekeys';
 
+function clampSnippet(text, max = 300) {
+    if (!text) return '';
+    return text.length > max ? text.slice(0, max) + '…' : text;
+}
+
 /**
  * Returns true if the request looks like a bad bot.
  */
@@ -124,8 +129,84 @@ export default {
                 url: request.url,
                 inFlight: inFlightToNextJs,
                 stats,
+                cf: {
+                    colo: request.cf?.colo,
+                    asn: request.cf?.asn,
+                    country: request.cf?.country,
+                }
             }, null, 2), {
                 headers: { 'Content-Type': 'application/json' }
+            });
+        }
+
+        // ── Health probe: hits WP + Next.js and reports latency/status ─
+        if (pathname === '/__health') {
+            const started = Date.now();
+            const results = {
+                router: 'active',
+                version: ROUTER_VERSION,
+                now: new Date().toISOString(),
+                cf: {
+                    colo: request.cf?.colo,
+                    asn: request.cf?.asn,
+                    country: request.cf?.country,
+                },
+                nextjs: null,
+                wpJson: null,
+                wpGraphql: null,
+                msTotal: 0,
+            };
+
+            // Next.js probe (service binding)
+            try {
+                const nextjsWorker = env.NEXTJS_WORKER;
+                if (!nextjsWorker) throw new Error('missing NEXTJS_WORKER binding');
+                const t0 = Date.now();
+                const probeReq = new Request('https://bootflare.com/?__router_probe=1', {
+                    method: 'GET',
+                    headers: { 'User-Agent': 'bootflare-router-healthcheck' },
+                });
+                const res = await withTimeout(nextjsWorker.fetch(probeReq), 12000);
+                results.nextjs = { status: res.status, ms: Date.now() - t0 };
+            } catch (e) {
+                results.nextjs = { error: e?.message || String(e) };
+            }
+
+            // WP JSON probe (direct origin)
+            try {
+                const t0 = Date.now();
+                const res = await withTimeout(fetch('https://origin-wp.bootflare.com/wp-json/', {
+                    headers: { 'User-Agent': 'bootflare-router-healthcheck' },
+                }), 12000);
+                const ct = res.headers.get('content-type') || '';
+                const body = await res.text();
+                results.wpJson = { status: res.status, ms: Date.now() - t0, contentType: ct, snippet: clampSnippet(body) };
+            } catch (e) {
+                results.wpJson = { error: e?.message || String(e) };
+            }
+
+            // WP GraphQL probe (direct origin)
+            try {
+                const t0 = Date.now();
+                const res = await withTimeout(fetch('https://origin-wp.bootflare.com/graphql', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'User-Agent': 'bootflare-router-healthcheck',
+                    },
+                    body: JSON.stringify({ query: 'query{__typename}' }),
+                }), 12000);
+                const ct = res.headers.get('content-type') || '';
+                const body = await res.text();
+                results.wpGraphql = { status: res.status, ms: Date.now() - t0, contentType: ct, snippet: clampSnippet(body) };
+            } catch (e) {
+                results.wpGraphql = { error: e?.message || String(e) };
+            }
+
+            results.msTotal = Date.now() - started;
+            return new Response(JSON.stringify(results, null, 2), {
+                headers: { 'Content-Type': 'application/json' },
             });
         }
 
@@ -191,6 +272,9 @@ export default {
                         stats.apiCacheHit++;
                         return response;
                     }
+
+                    // Count a miss when we attempted cache lookup
+                    stats.apiCacheMiss++;
                 } catch (e) {
                     console.error('API Cache Error:', e);
                 }
@@ -272,6 +356,8 @@ export default {
                 stats.pageCacheHit++;
                 return response;
             }
+
+            stats.pageCacheMiss++;
         }
 
         // Service Binding call with timeout — don't let the request hang forever
