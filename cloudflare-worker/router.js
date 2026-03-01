@@ -66,7 +66,7 @@ const MAX_CONCURRENT_NEXTJS = 50; // Max in-flight requests to Next.js per isola
 // ── Stats (per-isolate, resets on cold start) ───────────────────────────
 const stats = { apiCacheHit: 0, apiCacheMiss: 0, pageCacheHit: 0, pageCacheMiss: 0, botBlocked: 0, totalRequests: 0 };
 
-const ROUTER_VERSION = '2026-03-01-minimal-probe';
+const ROUTER_VERSION = '2026-03-02-dedup-probe';
 
 // ── WP API cache settings ────────────────────────────────────────────────
 // "Fresh" window: serve from cache without revalidating (2 minutes)
@@ -201,7 +201,7 @@ function serviceUnavailable(reason) {
 
 export default {
     /**
-     * Scheduled handler — pre-warms the WP API cache every 2 minutes.
+     * Scheduled handler — pre-warms the WP API cache every 5 minutes.
      * This ensures key endpoints always have a fresh (or at worst stale) cached response,
      * even when WP shared hosting is intermittently slow.
      */
@@ -339,21 +339,6 @@ export default {
                 };
             } catch (e) {
                 results.nextjs = { error: e?.message || String(e) };
-            }
-
-            // WP JSON probe (direct origin)
-            try {
-                const t0 = Date.now();
-                const wpJsonUrl = getWpTargetUrl('https://bootflare.com/wp-json/', env);
-                const res = await withTimeout(fetch(wpJsonUrl, {
-                    headers: { 'User-Agent': 'bootflare-router-healthcheck' },
-                    cf: getWpCfOptions(env),
-                }), 12000);
-                const ct = res.headers.get('content-type') || '';
-                const body = await res.text();
-                results.wpJson = { url: wpJsonUrl, status: res.status, ms: Date.now() - t0, contentType: ct, snippet: clampSnippet(body) };
-            } catch (e) {
-                results.wpJson = { error: e?.message || String(e) };
             }
 
             // WP JSON root probe (direct origin) — lightweight, just checks WP is alive

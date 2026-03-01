@@ -10,7 +10,7 @@
     "pages:build": "opennextjs-cloudflare build && npx wrangler deploy",
     "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
     "deploy": "opennextjs-cloudflare build && npx wrangler deploy",
-    "deploy:router": "npx wrangler deploy --config cloudflare-worker/wrangler.jsonc"
+    "deploy:router": "npx wrangler deploy --config cloudflare-worker/wrangler.jsonc --no-bundle"
   },
   "dependencies": {
     "@opennextjs/cloudflare": "^1.17.0",
