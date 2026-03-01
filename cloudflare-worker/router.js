@@ -66,7 +66,7 @@ const MAX_CONCURRENT_NEXTJS = 50; // Max in-flight requests to Next.js per isola
 // ── Stats (per-isolate, resets on cold start) ───────────────────────────
 const stats = { apiCacheHit: 0, apiCacheMiss: 0, pageCacheHit: 0, pageCacheMiss: 0, botBlocked: 0, totalRequests: 0 };
 
-const ROUTER_VERSION = '2026-03-01-edge-cache-active';
+const ROUTER_VERSION = '2026-03-01-8s-timeout';
 
 const DEFAULT_WP_RESOLVE_OVERRIDE = 'origin-wp.bootflare.com';
 
@@ -283,11 +283,12 @@ export default {
             // WP posts content probe — tests if actual content endpoints are healthy
             try {
                 const t0 = Date.now();
-                const postsUrl = getWpTargetUrl('https://bootflare.com/wp-json/wp/v2/posts?per_page=1&_fields=id,title&_embed=wp:featuredmedia', env);
+                // No _embed — just IDs and titles to test the DB query speed with minimal overhead
+                const postsUrl = getWpTargetUrl('https://bootflare.com/wp-json/wp/v2/posts?per_page=1&_fields=id,title', env);
                 const res = await withTimeout(fetch(postsUrl, {
                     headers: { 'User-Agent': 'bootflare-router-healthcheck', 'Accept': 'application/json' },
                     cf: getWpCfOptions(env),
-                }), 12000);
+                }), 15000);
                 const ct = res.headers.get('content-type') || '';
                 const body = await res.text();
                 results.wpPosts = { url: postsUrl, status: res.status, ms: Date.now() - t0, contentType: ct, snippet: clampSnippet(body, 150) };
