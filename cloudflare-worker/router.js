@@ -75,8 +75,24 @@ function clampSnippet(text, max = 300) {
     return text.length > max ? text.slice(0, max) + '…' : text;
 }
 
+function getOriginUrlHost(env) {
+    if (!env?.ORIGIN_URL) return null;
+    try {
+        return new URL(env.ORIGIN_URL).host;
+    } catch {
+        return 'INVALID_ORIGIN_URL';
+    }
+}
+
 function getWpTargetUrl(requestUrl, env) {
-    if (!env?.ORIGIN_URL) return requestUrl;
+    const originHost = getOriginUrlHost(env);
+
+    // If ORIGIN_URL isn't set (or is invalid), don't rewrite.
+    if (!originHost || originHost === 'INVALID_ORIGIN_URL') return requestUrl;
+
+    // IMPORTANT: If ORIGIN_URL points at the resolveOverride hostname, do NOT use it.
+    // That forces SNI to origin-wp.bootflare.com and will typically fail TLS/vhost on shared hosting.
+    if (originHost === DEFAULT_WP_RESOLVE_OVERRIDE) return requestUrl;
 
     // ORIGIN_URL should be a full URL like: https://your-hosting-provider.example
     // It must have a valid TLS cert. We still send Host: bootflare.com for vhost routing.
@@ -88,8 +104,11 @@ function getWpTargetUrl(requestUrl, env) {
 }
 
 function getWpCfOptions(env) {
-    // If ORIGIN_URL is provided, do not use resolveOverride (we're already targeting the origin host).
-    if (env?.ORIGIN_URL) return undefined;
+    const originHost = getOriginUrlHost(env);
+
+    // If ORIGIN_URL is provided (and isn't the resolveOverride hostname), do not use resolveOverride.
+    // We're already targeting the origin host.
+    if (originHost && originHost !== 'INVALID_ORIGIN_URL' && originHost !== DEFAULT_WP_RESOLVE_OVERRIDE) return undefined;
     return { resolveOverride: DEFAULT_WP_RESOLVE_OVERRIDE };
 }
 
@@ -139,12 +158,7 @@ export default {
 
         // ── Debug endpoint — visit bootflare.com/__debug to diagnose ─
         if (pathname === '/__debug') {
-            let originHost;
-            try {
-                originHost = env.ORIGIN_URL ? new URL(env.ORIGIN_URL).host : null;
-            } catch {
-                originHost = 'INVALID_ORIGIN_URL';
-            }
+            const originHost = getOriginUrlHost(env);
             return new Response(JSON.stringify({
                 router: 'active',
                 version: ROUTER_VERSION,
@@ -169,11 +183,12 @@ export default {
         // ── Health probe: hits WP + Next.js and reports latency/status ─
         if (pathname === '/__health') {
             const started = Date.now();
+            const originHost = getOriginUrlHost(env);
             const results = {
                 router: 'active',
                 version: ROUTER_VERSION,
                 now: new Date().toISOString(),
-                wpMode: env.ORIGIN_URL ? 'origin_url' : 'resolve_override',
+                wpMode: (originHost && originHost !== 'INVALID_ORIGIN_URL' && originHost !== DEFAULT_WP_RESOLVE_OVERRIDE) ? 'origin_url' : 'resolve_override',
                 cf: {
                     colo: request.cf?.colo,
                     asn: request.cf?.asn,
