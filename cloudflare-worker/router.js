@@ -28,7 +28,6 @@ const WP_PATHS = [
     '/wp-signup.php',
     '/wp-cron.php',
     '/xmlrpc.php',
-    '/graphql',          // WPGraphQL endpoint — Next.js fetches this server-side
     '/sitemap.xml',      // WordPress SEO sitemap
     '/sitemap_index.xml',
     '/robots.txt',
@@ -301,7 +300,7 @@ export default {
             };
 
             // Next.js probe (service binding) — hit a lightweight endpoint that
-            // does not depend on WP/GraphQL.
+            // does not depend on WP.
             try {
                 const nextjsWorker = env.NEXTJS_WORKER;
                 if (!nextjsWorker) throw new Error('missing NEXTJS_WORKER binding');
@@ -405,8 +404,8 @@ export default {
             wpHeaders.set('X-Forwarded-Proto', 'https');
             wpHeaders.set('X-Forwarded-For', request.headers.get('CF-Connecting-IP') || '');
 
-            // --- API Caching (GraphQL & REST) ---
-            const isApi = pathname === '/graphql' || pathname.startsWith('/wp-json');
+            // --- API Caching (WP REST) ---
+            const isApi = pathname.startsWith('/wp-json');
             const cache = caches.default;
             let cacheKey = request;
 
@@ -416,24 +415,10 @@ export default {
             const reqCacheControl = (request.headers.get('Cache-Control') || '').toLowerCase();
             const bypassApiCache = reqCacheControl.includes('no-store') || reqCacheControl.includes('no-cache');
 
-            if (isApi && !bypassApiCache && ['GET', 'POST'].includes(request.method)) {
+            if (isApi && !bypassApiCache && request.method === 'GET') {
                 try {
-                    if (request.method === 'POST') {
-                        // For POST (GraphQL), we must hash the body to create a unique cache key
-                        const body = await request.clone().text();
-                        const hashBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(body));
-                        const hashArray = Array.from(new Uint8Array(hashBuffer));
-                        const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-
-                        const cacheUrl = new URL(request.url);
-                        cacheUrl.searchParams.set('__gql_hash', hashHex);
-                        // Cache key must NOT include original request headers (Cookie, UA, etc.)
-                        // otherwise every visitor gets a unique cache key and the cache never hits
-                        cacheKey = new Request(cacheUrl.toString(), { method: 'GET' });
-                    } else {
-                        // GET requests: use URL only, strip varying headers
-                        cacheKey = new Request(request.url, { method: 'GET' });
-                    }
+                    // GET requests: use URL only, strip varying headers
+                    cacheKey = new Request(request.url, { method: 'GET' });
 
                     const cachedResponse = await cache.match(cacheKey);
                     if (cachedResponse) {
@@ -483,7 +468,7 @@ export default {
             const contentType = response.headers.get('content-type') || '';
             const isJson = contentType.includes('application/json');
 
-            if (isApi && !bypassApiCache && response.ok && isJson && ['GET', 'POST'].includes(request.method)) {
+            if (isApi && !bypassApiCache && response.ok && isJson && request.method === 'GET') {
                 try {
                     // Clone body to inspect content — don't cache empty arrays/objects
                     // (WP returns [] under load; caching that poisons the site)
