@@ -230,12 +230,37 @@ export default {
                 const nextjsWorker = env.NEXTJS_WORKER;
                 if (!nextjsWorker) throw new Error('missing NEXTJS_WORKER binding');
                 const t0 = Date.now();
-                const probeReq = new Request('https://bootflare.com/api/ping?__router_probe=1', {
+                const probeUrl = new URL(request.url);
+                probeUrl.pathname = '/api/ping';
+                probeUrl.search = '?__router_probe=1';
+
+                // Forward a realistic header set so Next can derive host/proto/etc.
+                const probeHeaders = new Headers(request.headers);
+                probeHeaders.set('User-Agent', 'bootflare-router-healthcheck');
+                probeHeaders.set('Accept', 'text/plain');
+                probeHeaders.delete('Cookie');
+
+                const probeReq = new Request(probeUrl.toString(), {
                     method: 'GET',
-                    headers: { 'User-Agent': 'bootflare-router-healthcheck' },
+                    headers: probeHeaders,
                 });
                 const res = await withTimeout(nextjsWorker.fetch(probeReq), 8000);
-                results.nextjs = { status: res.status, ms: Date.now() - t0 };
+
+                const ct = res.headers.get('content-type') || '';
+                let snippet = '';
+                try {
+                    snippet = clampSnippet(await res.clone().text());
+                } catch {
+                    snippet = '';
+                }
+
+                results.nextjs = {
+                    url: probeUrl.toString(),
+                    status: res.status,
+                    ms: Date.now() - t0,
+                    contentType: ct,
+                    snippet,
+                };
             } catch (e) {
                 results.nextjs = { error: e?.message || String(e) };
             }
