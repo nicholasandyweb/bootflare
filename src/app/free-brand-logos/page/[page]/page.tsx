@@ -1,4 +1,3 @@
-export const revalidate = 3600;
 export const dynamic = 'force-dynamic';
 import LogosTemplate from '@/components/LogosTemplate';
 import { fetchRankMathSEO, mapRankMathToMetadata } from '@/lib/seo';

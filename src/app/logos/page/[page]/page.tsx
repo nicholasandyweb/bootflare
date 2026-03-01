@@ -1,4 +1,3 @@
-export const revalidate = 3600;
 export const dynamic = 'force-dynamic';
 export const dynamicParams = true;
 import LogosTemplate from '@/components/LogosTemplate';

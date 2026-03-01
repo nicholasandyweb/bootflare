@@ -1,5 +1,5 @@
-export const revalidate = 3600;
-import { cache, Suspense } from 'react';
+export const dynamic = 'force-dynamic';
+import { Suspense } from 'react';
 import { fetchREST } from '@/lib/rest';
 import Link from 'next/link';
 import { Download, ChevronLeft, Flag } from 'lucide-react';
@@ -36,7 +36,7 @@ interface LogoNode {
     };
 }
 
-const getLogoBySlug = cache(async (slug: string) => {
+async function getLogoBySlug(slug: string) {
     try {
         const logos = await fetchREST(`logo?slug=${slug}&_embed&_fields=id,title,content,slug,excerpt,_links,_embedded`);
         if (!logos || logos.length === 0) return null;
@@ -67,7 +67,7 @@ const getLogoBySlug = cache(async (slug: string) => {
         console.error('Error fetching logo via REST:', e);
         return null;
     }
-});
+}
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
     const { slug } = await params;

@@ -1,4 +1,4 @@
-export const revalidate = 3600; // 1 hour
+export const dynamic = 'force-dynamic';
 import HomeClient from '@/components/HomeClient';
 import { fetchRankMathSEO, mapRankMathToMetadata } from '@/lib/seo';
 import { Metadata } from 'next';
@@ -22,8 +22,8 @@ export default async function Home() {
 
   try {
     const [logosData, musicData] = await Promise.all([
-      fetchREST('logo?per_page=20&_fields=id,_links,_embedded'),
-      fetchREST('sr_playlist?per_page=10&_fields=id,_links,_embedded')
+      fetchREST('logo?per_page=20&_fields=id,_links,_embedded', 2),
+      fetchREST('sr_playlist?per_page=10&_fields=id,_links,_embedded', 2)
     ]);
 
     if (logosData && Array.isArray(logosData)) {

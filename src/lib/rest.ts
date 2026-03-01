@@ -102,7 +102,7 @@ async function _doFetchREST(url: string, retries: number): Promise<any> {
     return null;
 }
 
-export async function fetchREST(endpoint: string, retries = 1, namespace = 'wp/v2') {
+export async function fetchREST(endpoint: string, retries = 2, namespace = 'wp/v2') {
     const separator = endpoint.includes('?') ? '&' : '?';
     const embedParam = endpoint.includes('_embed') ? '' : `${separator}_embed`;
     const url = endpoint.startsWith('http') ? endpoint : `${WP_URL}/wp-json/${namespace}/${endpoint}${embedParam}`;
@@ -188,7 +188,7 @@ async function _doFetchRESTWithMeta(url: string, retries: number): Promise<any> 
     return null;
 }
 
-export async function fetchRESTWithMeta(endpoint: string, retries = 1, namespace = 'wp/v2') {
+export async function fetchRESTWithMeta(endpoint: string, retries = 2, namespace = 'wp/v2') {
     const separator = endpoint.includes('?') ? '&' : '?';
     const embedParam = endpoint.includes('_embed') ? '' : `${separator}_embed`;
     const url = endpoint.startsWith('http') ? endpoint : `${WP_URL}/wp-json/${namespace}/${endpoint}${embedParam}`;

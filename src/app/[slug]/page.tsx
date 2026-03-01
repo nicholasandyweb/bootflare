@@ -1,11 +1,8 @@
-export const revalidate = 86400; // 24 hours
-
 import { internalizeLinks, stripScripts } from '@/lib/sanitize';
 import { Calendar, User, ArrowLeft, Clock, AlertTriangle, MessageCircle, Facebook, Twitter, Linkedin } from 'lucide-react';
 import Link from 'next/link';
 import { Metadata } from 'next';
 import { fetchRankMathSEO, mapRankMathToMetadata, mapWPToMetadata } from '@/lib/seo';
-import { cache } from 'react';
 import { notFound } from 'next/navigation';
 import CommentForm from '@/components/CommentForm';
 import ArticleContent from '@/components/ArticleContent';
@@ -40,14 +37,10 @@ interface RESTPost {
   };
 }
 
-const getPostBySlug = cache(async (slug: string) => {
-  return await getRESTPostBySlug(slug);
-});
-
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
   try {
-    const post = await getPostBySlug(slug) as RESTPost;
+    const post = await getRESTPostBySlug(slug) as RESTPost;
     if (post) {
       const seo = await fetchRankMathSEO(`https://bootflare.com/${slug}/`);
       if (seo) return mapRankMathToMetadata(seo);
@@ -67,7 +60,7 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
   let errorOccurred = false;
 
   try {
-    post = await getPostBySlug(slug) as RESTPost;
+    post = await getRESTPostBySlug(slug) as RESTPost;
     if (post) {
       comments = await getRESTComments(post.id) as RESTComment[];
     }
