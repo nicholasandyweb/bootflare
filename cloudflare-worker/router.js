@@ -334,7 +334,13 @@ export default {
             const cache = caches.default;
             let cacheKey = request;
 
-            if (isApi && ['GET', 'POST'].includes(request.method)) {
+            // For WP REST endpoints, honour the requester's Cache-Control so that
+            // Next.js SSR subrequests (which send `cache: 'no-store'`) always get
+            // a fresh response and never receive a stale/empty cached payload.
+            const reqCacheControl = (request.headers.get('Cache-Control') || '').toLowerCase();
+            const bypassApiCache = reqCacheControl.includes('no-store') || reqCacheControl.includes('no-cache');
+
+            if (isApi && !bypassApiCache && ['GET', 'POST'].includes(request.method)) {
                 try {
                     if (request.method === 'POST') {
                         // For POST (GraphQL), we must hash the body to create a unique cache key
@@ -383,14 +389,27 @@ export default {
             const contentType = response.headers.get('content-type') || '';
             const isJson = contentType.includes('application/json');
 
-            if (isApi && response.ok && isJson && ['GET', 'POST'].includes(request.method)) {
-                const responseToCache = new Response(response.clone().body, response);
-                responseToCache.headers.set('Cache-Control', 'public, s-maxage=3600');
-                ctx.waitUntil(cache.put(cacheKey, responseToCache));
+            if (isApi && !bypassApiCache && response.ok && isJson && ['GET', 'POST'].includes(request.method)) {
+                try {
+                    // Clone body to inspect content — don't cache empty arrays/objects
+                    // (WP returns [] when under load; caching that poisons the site for minutes)
+                    const bodyText = await response.clone().text();
+                    const isSubstantial = bodyText.length > 10; // more than [] or {}
 
-                const newResponse = new Response(response.body, response);
-                newResponse.headers.set('X-API-Cache', 'MISS');
-                return newResponse;
+                    if (isSubstantial) {
+                        const responseToCache = new Response(bodyText, response);
+                        // 120s TTL — short enough that stale data self-heals quickly
+                        responseToCache.headers.set('Cache-Control', 'public, s-maxage=120');
+                        ctx.waitUntil(cache.put(cacheKey, responseToCache));
+                    }
+
+                    const newResponse = new Response(bodyText, response);
+                    newResponse.headers.set('X-API-Cache', 'MISS');
+                    return newResponse;
+                } catch (e) {
+                    console.error('API Cache Store Error:', e);
+                    // Fall through and return the original response uncached
+                }
             }
 
             return response;

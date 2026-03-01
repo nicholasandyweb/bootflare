@@ -113,8 +113,8 @@ export async function fetchREST(endpoint: string, retries = 1, namespace = 'wp/v
     }
 
     // Production: do NOT use Next.js Data Cache here.
-    // The router already caches /wp-json responses at the edge; caching null here
-    // can poison pages with fallback content for an hour.
+    // This fetch sends `cache: 'no-store'` which tells the router worker to bypass
+    // its edge cache (120s TTL) so SSR always gets fresh WP data.
     return await _doFetchREST(url, retries);
 }
 
@@ -195,7 +195,9 @@ export async function fetchRESTWithMeta(endpoint: string, retries = 1, namespace
         return result;
     }
 
-    // Production: avoid Next.js Data Cache poisoning.
+    // Production: do NOT use Next.js Data Cache here.
+    // Uses `cache: 'no-store'` so the router worker bypasses its edge cache
+    // and Next.js always receives fresh WP data.
     return await _doFetchRESTWithMeta(url, retries);
 }
 
