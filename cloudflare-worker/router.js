@@ -68,9 +68,29 @@ const stats = { apiCacheHit: 0, apiCacheMiss: 0, pageCacheHit: 0, pageCacheMiss:
 
 const ROUTER_VERSION = '2026-03-01-origin-direct-cachekeys';
 
+const DEFAULT_WP_RESOLVE_OVERRIDE = 'origin-wp.bootflare.com';
+
 function clampSnippet(text, max = 300) {
     if (!text) return '';
     return text.length > max ? text.slice(0, max) + '…' : text;
+}
+
+function getWpTargetUrl(requestUrl, env) {
+    if (!env?.ORIGIN_URL) return requestUrl;
+
+    // ORIGIN_URL should be a full URL like: https://your-hosting-provider.example
+    // It must have a valid TLS cert. We still send Host: bootflare.com for vhost routing.
+    const origin = new URL(env.ORIGIN_URL);
+    const target = new URL(requestUrl);
+    target.protocol = origin.protocol;
+    target.host = origin.host;
+    return target.toString();
+}
+
+function getWpCfOptions(env) {
+    // If ORIGIN_URL is provided, do not use resolveOverride (we're already targeting the origin host).
+    if (env?.ORIGIN_URL) return undefined;
+    return { resolveOverride: DEFAULT_WP_RESOLVE_OVERRIDE };
 }
 
 /**
@@ -119,11 +139,18 @@ export default {
 
         // ── Debug endpoint — visit bootflare.com/__debug to diagnose ─
         if (pathname === '/__debug') {
+            let originHost;
+            try {
+                originHost = env.ORIGIN_URL ? new URL(env.ORIGIN_URL).host : null;
+            } catch {
+                originHost = 'INVALID_ORIGIN_URL';
+            }
             return new Response(JSON.stringify({
                 router: 'active',
                 version: ROUTER_VERSION,
                 hasServiceBinding: !!env.NEXTJS_WORKER,
                 hasOriginUrl: !!env.ORIGIN_URL,
+                originHost,
                 host: request.headers.get('Host'),
                 pathname,
                 url: request.url,
@@ -146,6 +173,7 @@ export default {
                 router: 'active',
                 version: ROUTER_VERSION,
                 now: new Date().toISOString(),
+                wpMode: env.ORIGIN_URL ? 'origin_url' : 'resolve_override',
                 cf: {
                     colo: request.cf?.colo,
                     asn: request.cf?.asn,
@@ -175,9 +203,9 @@ export default {
             // WP JSON probe (direct origin)
             try {
                 const t0 = Date.now();
-                const res = await withTimeout(fetch('https://bootflare.com/wp-json/', {
+                const res = await withTimeout(fetch(getWpTargetUrl('https://bootflare.com/wp-json/', env), {
                     headers: { 'User-Agent': 'bootflare-router-healthcheck' },
-                    cf: { resolveOverride: 'origin-wp.bootflare.com' },
+                    cf: getWpCfOptions(env),
                 }), 12000);
                 const ct = res.headers.get('content-type') || '';
                 const body = await res.text();
@@ -189,7 +217,7 @@ export default {
             // WP GraphQL probe (direct origin)
             try {
                 const t0 = Date.now();
-                const res = await withTimeout(fetch('https://bootflare.com/graphql', {
+                const res = await withTimeout(fetch(getWpTargetUrl('https://bootflare.com/graphql', env), {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -197,7 +225,7 @@ export default {
                         'User-Agent': 'bootflare-router-healthcheck',
                     },
                     body: JSON.stringify({ query: 'query{__typename}' }),
-                    cf: { resolveOverride: 'origin-wp.bootflare.com' },
+                    cf: getWpCfOptions(env),
                 }), 12000);
                 const ct = res.headers.get('content-type') || '';
                 const body = await res.text();
@@ -284,12 +312,13 @@ export default {
 
             // IMPORTANT: Keep URL host as bootflare.com so TLS/SNI matches your existing cert,
             // but route DNS to the real origin via resolveOverride.
-            const response = await fetch(request.url, {
+            const wpTargetUrl = getWpTargetUrl(request.url, env);
+            const response = await fetch(wpTargetUrl, {
                 method: request.method,
                 headers: wpHeaders,
                 body: ['GET', 'HEAD'].includes(request.method) ? null : request.body,
                 redirect: 'manual',
-                cf: { resolveOverride: 'origin-wp.bootflare.com' },
+                cf: getWpCfOptions(env),
             });
 
             // Cache successful API responses that return actual JSON (not HTML bot challenges)
@@ -303,7 +332,6 @@ export default {
 
                 const newResponse = new Response(response.body, response);
                 newResponse.headers.set('X-API-Cache', 'MISS');
-                stats.apiCacheMiss++;
                 return newResponse;
             }
 
@@ -388,7 +416,6 @@ export default {
 
             response = new Response(responseToCache.body, responseToCache);
             response.headers.set('X-Worker-Cache', 'MISS');
-            stats.pageCacheMiss++;
         }
 
         return response;
