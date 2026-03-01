@@ -66,7 +66,7 @@ const MAX_CONCURRENT_NEXTJS = 50; // Max in-flight requests to Next.js per isola
 // ── Stats (per-isolate, resets on cold start) ───────────────────────────
 const stats = { apiCacheHit: 0, apiCacheMiss: 0, pageCacheHit: 0, pageCacheMiss: 0, botBlocked: 0, totalRequests: 0 };
 
-const ROUTER_VERSION = '2026-03-01-no-html-cache';
+const ROUTER_VERSION = '2026-03-01-health-ping';
 
 const DEFAULT_WP_RESOLVE_OVERRIDE = 'origin-wp.bootflare.com';
 
@@ -225,16 +225,17 @@ export default {
                 msTotal: 0,
             };
 
-            // Next.js probe (service binding)
+            // Next.js probe (service binding) — hit a lightweight endpoint that
+            // does not depend on WP/GraphQL.
             try {
                 const nextjsWorker = env.NEXTJS_WORKER;
                 if (!nextjsWorker) throw new Error('missing NEXTJS_WORKER binding');
                 const t0 = Date.now();
-                const probeReq = new Request('https://bootflare.com/?__router_probe=1', {
+                const probeReq = new Request('https://bootflare.com/api/ping?__router_probe=1', {
                     method: 'GET',
                     headers: { 'User-Agent': 'bootflare-router-healthcheck' },
                 });
-                const res = await withTimeout(nextjsWorker.fetch(probeReq), 12000);
+                const res = await withTimeout(nextjsWorker.fetch(probeReq), 8000);
                 results.nextjs = { status: res.status, ms: Date.now() - t0 };
             } catch (e) {
                 results.nextjs = { error: e?.message || String(e) };

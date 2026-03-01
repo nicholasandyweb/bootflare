@@ -15,11 +15,15 @@ export const client = new GraphQLClient(endpoint, {
 // 10s timeout — the router caches GraphQL responses (1hr), so most requests are instant cache hits.
 // Only cold requests actually hit WordPress.
 const FETCH_TIMEOUT = 10000;
+// If the Next.js Data Cache contains a transient failure (null), do a single
+// short direct attempt. Avoid long multi-retry recovery that can stall SSR and
+// trigger router timeouts.
+const DIRECT_RECOVERY_TIMEOUT = 4000;
 
-async function _doFetch(query: string, variablesJson: string, retries: number): Promise<unknown> {
+async function _doFetch(query: string, variablesJson: string, retries: number, timeoutMs = FETCH_TIMEOUT): Promise<unknown> {
   for (let i = 0; i < retries; i++) {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT);
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
       const res = await fetch(endpoint, {
@@ -131,10 +135,10 @@ export async function fetchGraphQL<T>(query: string, variables?: Record<string, 
 
   // NOTE: If we ever cache a transient failure (null), it can poison pages with
   // fallback data for the entire revalidate window. To avoid that, if the cached
-  // result is null, we attempt one direct (uncached) fetch.
+  // result is null, we attempt one short direct (uncached) fetch.
   const cachedResult = await _cachedFetch(query, variablesJson, retries);
   if (cachedResult === null) {
-    const directResult = await _doFetch(query, variablesJson, Math.max(retries, 2));
+    const directResult = await _doFetch(query, variablesJson, 1, DIRECT_RECOVERY_TIMEOUT);
     return directResult as T;
   }
 

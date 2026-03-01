@@ -69,7 +69,9 @@ function extractTitle(head: string): string | undefined {
  */
 export async function fetchRankMathSEO(postUrl: string): Promise<RankMathSEO | null> {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 20000); // 20s timeout
+    // Keep this short so metadata/SEO never blocks page rendering.
+    // The router caches /wp-json/* at the edge, so warm requests are fast.
+    const timeout = setTimeout(() => controller.abort(), 4000); // 4s timeout
 
     try {
         const apiUrl = `${WP_URL}/wp-json/rankmath/v1/getHead?url=${encodeURIComponent(postUrl)}`;
@@ -83,8 +85,6 @@ export async function fetchRankMathSEO(postUrl: string): Promise<RankMathSEO | n
             cache: 'no-store',
             signal: controller.signal,
         });
-        clearTimeout(timeout);
-
         if (!res.ok) return null;
 
         const data = await res.json();
@@ -103,8 +103,9 @@ export async function fetchRankMathSEO(postUrl: string): Promise<RankMathSEO | n
             twitterImage: extractMeta(head, 'twitter:image'),
         };
     } catch {
-        clearTimeout(timeout);
         return null;
+    } finally {
+        clearTimeout(timeout);
     }
 }
 
