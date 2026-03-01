@@ -3,8 +3,8 @@ const WP_URL = 'https://bootflare.com';
 // Development-only in-memory cache to prevent "minutes of loading" during local testing
 const devCache = new Map<string, { data: any; timestamp: number }>();
 const CACHE_TTL = 10 * 60 * 1000; // 10 minutes
-// 10s timeout — the router caches REST responses (1hr), so most requests are instant cache hits.
-const FETCH_TIMEOUT = 10000;
+// 5s timeout — short enough that 2 retries (5+1+5 = 11s) stay safely under the 30s router limit.
+const FETCH_TIMEOUT = 5000;
 
 function findJsonBounds(text: string): { start: number; end: number } | null {
     if (!text) return null;
@@ -62,6 +62,8 @@ async function _doFetchREST(url: string, retries: number): Promise<any> {
             }
 
             if (res.status === 429 || res.status === 503 || res.status === 502) {
+                // Don't waste time waiting on the last attempt.
+                if (i === retries - 1) return null;
                 const waitTime = Math.min(Math.pow(2, i) * 1000, 5000);
                 await new Promise(resolve => setTimeout(resolve, waitTime));
                 continue;
@@ -142,6 +144,7 @@ async function _doFetchRESTWithMeta(url: string, retries: number): Promise<any> 
             }
 
             if (res.status === 429 || res.status === 503 || res.status === 502) {
+                if (i === retries - 1) return null;
                 const waitTime = Math.min(Math.pow(2, i) * 1000, 5000);
                 await new Promise(resolve => setTimeout(resolve, waitTime));
                 continue;

@@ -94,8 +94,9 @@ async function getRelatedLogos(logo: LogoNode) {
     const excludedIds = [logo.databaseId];
 
     try {
-        // Step 1: Try fetching from Contextual Related Posts (CRP) plugin
-        const crpResults: { id?: number; ID?: number }[] = await fetchREST(`posts/${logo.databaseId}?limit=${targetCount}`, 3, 'contextual-related-posts/v1');
+        // Step 1: Try fetching from Contextual Related Posts (CRP) plugin.
+        // retries=1 — CRP is nice-to-have; don't burn time retrying a slow/absent endpoint.
+        const crpResults: { id?: number; ID?: number }[] = await fetchREST(`posts/${logo.databaseId}?limit=${targetCount}`, 1, 'contextual-related-posts/v1');
 
         if (crpResults && Array.isArray(crpResults) && crpResults.length > 0) {
             const relatedIds = Array.from(new Set(
