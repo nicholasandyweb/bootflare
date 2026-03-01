@@ -15,16 +15,14 @@ export async function GET(request: NextRequest) {
         if (!response.ok) throw new Error('Failed to fetch image');
 
         const arrayBuffer = await response.arrayBuffer();
-        const buffer = Buffer.from(arrayBuffer);
 
+        // Cloudflare Workers runtime: avoid Node.js Buffer.
         const headers = new Headers();
         headers.set('Content-Disposition', `attachment; filename="${filename}"`);
         headers.set('Content-Type', response.headers.get('Content-Type') || 'image/png');
+        headers.set('Cache-Control', 'no-store');
 
-        return new NextResponse(buffer, {
-            status: 200,
-            headers,
-        });
+        return new NextResponse(arrayBuffer, { status: 200, headers });
     } catch (error) {
         console.error('Download proxy error:', error);
         return new NextResponse('Error fetching image', { status: 500 });

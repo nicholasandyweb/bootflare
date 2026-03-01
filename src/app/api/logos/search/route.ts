@@ -9,7 +9,17 @@ export async function GET(request: Request) {
   }
 
   try {
-    const logos = await fetchREST(`logo?search=${encodeURIComponent(query)}&per_page=50&_embed&_fields=id,title,slug,_links,_embedded`);
+    // Search can be expensive on shared hosting; keep it fast.
+    const logos = await fetchREST(
+      `logo?search=${encodeURIComponent(query)}&per_page=50&_embed&_fields=id,title,slug,_links,_embedded`,
+      1
+    );
+
+    // If WP is overloaded and returns HTML/503, fetchREST returns null.
+    // Return empty results instead of timing out the entire request.
+    if (!Array.isArray(logos) || logos.length === 0) {
+      return NextResponse.json([]);
+    }
 
     // Deduplicate results by ID
     const uniqueLogos = Array.from(new Map(logos.map((item: any) => [item.id, item])).values());
@@ -37,13 +47,8 @@ export async function GET(request: Request) {
 
     return NextResponse.json(sortedLogos.slice(0, 20));
   } catch (error) {
-    console.warn('Search API GraphQL failed, falling back to REST:', error);
-    try {
-      const logos = await fetchREST(`logo?search=${encodeURIComponent(query)}&per_page=50&_embed`);
-      return NextResponse.json(logos.slice(0, 20));
-    } catch (e) {
-      console.error('Search API final failure:', e);
-      return NextResponse.json({ error: 'Failed to fetch search results' }, { status: 500 });
-    }
+    console.error('Search API failure:', error);
+    // Never hold the request open for retries; empty results are acceptable for search.
+    return NextResponse.json([]);
   }
 }
