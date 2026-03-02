@@ -65,7 +65,7 @@ const MAX_CONCURRENT_NEXTJS = 50; // Max in-flight requests to Next.js per isola
 // ── Stats (per-isolate, resets on cold start) ───────────────────────────
 const stats = { apiCacheHit: 0, apiCacheMiss: 0, pageCacheHit: 0, pageCacheMiss: 0, botBlocked: 0, totalRequests: 0 };
 
-const ROUTER_VERSION = '2026-03-02-flexible-ssl';  // CF Flexible SSL on origin-wp — https fetch, HTTP to origin
+const ROUTER_VERSION = '2026-03-02-html-cache-v1';  // Cache HTML 10s for fast reloads
 
 // ── WP API cache settings ────────────────────────────────────────────────
 // "Fresh" window: serve from cache without revalidating (2 minutes)
