@@ -114,7 +114,7 @@ async function refreshWpApiCache(cacheKey, wpTargetUrl, wpHeaders, cache) {
             method: 'GET',
             headers: wpHeaders,
             redirect: 'manual',
-        }), 12000);
+        }), 25000); // 25s for background refresh
 
         if (!res.ok) return;
         const ct = res.headers.get('content-type') || '';
@@ -330,7 +330,7 @@ export default {
                         'Host': 'bootflare.com',
                         'User-Agent': 'bootflare-router-healthcheck',
                     },
-                }), 12000);
+                }), 20000);
                 const ct = res.headers.get('content-type') || '';
                 const body = await res.text();
                 results.wpJson = { url: wpJsonUrl, status: res.status, ms: Date.now() - t0, contentType: ct, snippet: clampSnippet(body) };
@@ -348,7 +348,7 @@ export default {
                         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                         'Accept': 'application/json',
                     },
-                }), 12000);
+                }), 25000);
                 const ct = res.headers.get('content-type') || '';
                 const body = await res.text();
                 results.wpPosts = { url: wpPostsUrl, status: res.status, ms: Date.now() - t0, contentType: ct, snippet: clampSnippet(body, 150) };
