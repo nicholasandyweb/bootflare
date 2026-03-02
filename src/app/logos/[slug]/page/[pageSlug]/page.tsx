@@ -21,12 +21,12 @@ export default async function LogoCategoryPaginated({ params }: { params: Promis
     let totalPages = 1;
 
     try {
-        const categories = await fetchREST(`logo-category?slug=${slug}&_fields=id,name,description`);
+        const categories = await fetchREST(`logos?slug=${slug}&_fields=id,name,description`);
         if (categories && Array.isArray(categories) && categories.length > 0) {
             const cat = categories[0];
             categoryName = cat.name;
             categoryDescription = cat.description || '';
-            const res = await fetchRESTWithMeta(`logo?logo-category=${cat.id}&per_page=${perPage}&page=${page}&_embed&_fields=id,title,slug,_links,_embedded`);
+            const res = await fetchRESTWithMeta(`logo?logos=${cat.id}&per_page=${perPage}&page=${page}&_embed&_fields=id,title,slug,_links,_embedded`);
             if (res && res.data) {
                 logos = res.data;
                 totalPages = res.totalPages;

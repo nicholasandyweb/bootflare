@@ -28,12 +28,12 @@ export default async function LogoCategory({ params }: { params: Promise<{ slug:
     let totalPages = 1;
 
     try {
-        const categories = await fetchREST(`logo-category?slug=${slug}&_fields=id,name,description`);
+        const categories = await fetchREST(`logos?slug=${slug}&_fields=id,name,description`);
         if (categories && Array.isArray(categories) && categories.length > 0) {
             const catId = categories[0].id;
             categoryName = categories[0].name;
             categoryDescription = categories[0].description || '';
-            const res = await fetchRESTWithMeta(`logo?logo-category=${catId}&per_page=${perPage}&page=${page}&_embed&_fields=id,title,slug,_links,_embedded`);
+            const res = await fetchRESTWithMeta(`logo?logos=${catId}&per_page=${perPage}&page=${page}&_embed&_fields=id,title,slug,_links,_embedded`);
             if (res && res.data) {
                 logos = res.data;
                 totalPages = res.totalPages;

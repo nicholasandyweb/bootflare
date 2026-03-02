@@ -35,8 +35,8 @@ export default async function LogoCategoriesArchive() {
     try {
         const [results, seoResult] = await Promise.all([
             Promise.allSettled([
-                fetchREST('logo-category?per_page=100&hide_empty=true&_fields=id,name,slug,count'),
-                fetchREST('taxonomies/logo-category?_fields=name,description')
+                fetchREST('logos?per_page=100&hide_empty=true&_fields=id,name,slug,count'),
+                fetchREST('taxonomies/logos?_fields=name,description')
             ]),
             fetchRankMathSEO('https://bootflare.com/free-brand-logos/')
         ]);
