@@ -71,7 +71,7 @@ export async function fetchRankMathSEO(postUrl: string): Promise<RankMathSEO | n
     const controller = new AbortController();
     // Keep this short so metadata/SEO never blocks page rendering.
     // The router caches /wp-json/* at the edge, so warm requests are fast.
-    const timeout = setTimeout(() => controller.abort(), 4000); // 4s timeout
+    const timeout = setTimeout(() => controller.abort(), 12000); // 12s — WP shared hosting takes 3-5s on warm, more on cold
 
     try {
         const apiUrl = `${WP_URL}/wp-json/rankmath/v1/getHead?url=${encodeURIComponent(postUrl)}`;

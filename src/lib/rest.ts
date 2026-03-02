@@ -3,10 +3,10 @@ const WP_URL = 'https://bootflare.com';
 // Development-only in-memory cache to prevent "minutes of loading" during local testing
 const devCache = new Map<string, { data: any; timestamp: number }>();
 const CACHE_TTL = 10 * 60 * 1000; // 10 minutes
-// 8s timeout — gives WP shared hosting enough time for heavier queries.
-// With retries=1: worst case per call = 8s; deepest sequential chain (2 calls) = 16s,
-// still safely under the 30s router/worker limit.
-const FETCH_TIMEOUT = 8000;
+// 15s timeout — shared hosting WP can take 3-5s on simple queries, more on
+// heavier _embed requests. 15s gives enough headroom for cold pages without
+// blocking the 30s router limit.
+const FETCH_TIMEOUT = 15000;
 
 function findJsonBounds(text: string): { start: number; end: number } | null {
     if (!text) return null;
