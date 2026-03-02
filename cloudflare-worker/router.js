@@ -518,8 +518,18 @@ export default {
             cacheKey = new Request(request.url, { method: 'GET' });
         }
 
-        // Only cache static assets. Caching HTML can "stick" fallback SSR for a long time.
-        const useCache = isCacheableMethod && isStaticAssetPath(pathname) && !url.searchParams.has('nocache');
+        const accept = request.headers.get('Accept') || '';
+        const wantsHtml = accept.includes('text/html');
+        const isStatic = isStaticAssetPath(pathname);
+        const isHtmlPage = !isStatic && wantsHtml;
+        const hasCookies = !!request.headers.get('Cookie');
+
+        // Cache static assets aggressively and HTML pages for a very short time.
+        // HTML cache is only for anonymous requests (no cookies) so logged-in/admin
+        // traffic and previews always bypass it.
+        const canCacheStatic = isCacheableMethod && isStatic && !url.searchParams.has('nocache');
+        const canCacheHtml = isCacheableMethod && isHtmlPage && !hasCookies && !url.searchParams.has('nocache');
+        const useCache = canCacheStatic || canCacheHtml;
 
         if (useCache) {
             const cachedResponse = await cache.match(cacheKey);
@@ -562,7 +572,13 @@ export default {
         // Store in cache if status is OK and it's a cacheable method
         if (useCache && response.ok) {
             const responseToCache = new Response(response.body, response);
-            responseToCache.headers.set('Cache-Control', 'public, s-maxage=3600');
+            const ct = responseToCache.headers.get('content-type') || '';
+            const isHtmlResponse = ct.includes('text/html');
+
+            // Static assets: 1 hour; HTML pages: very short TTL (10s) so
+            // reloads are instant but fallback content cannot stick for long.
+            const ttl = isHtmlResponse ? 10 : 3600;
+            responseToCache.headers.set('Cache-Control', `public, s-maxage=${ttl}`);
 
             ctx.waitUntil(cache.put(cacheKey, responseToCache.clone()));
 
