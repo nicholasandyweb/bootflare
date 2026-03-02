@@ -37,8 +37,8 @@ export default async function Home() {
       : [];
     const mediaMap = new Map((mediaList || []).map((m: any) => [m.id, m.source_url as string]));
 
-    logoImages = logoMediaIds.map((id: number) => mediaMap.get(id)).filter((u): u is string => !!u);
-    musicImages = musicMediaIds.map((id: number) => mediaMap.get(id)).filter((u): u is string => !!u);
+    logoImages = logoMediaIds.map((id: number) => mediaMap.get(id)).filter((u: string | undefined): u is string => !!u);
+    musicImages = musicMediaIds.map((id: number) => mediaMap.get(id)).filter((u: string | undefined): u is string => !!u);
   } catch (error) {
     console.error('Error fetching homepage data:', error);
   }
