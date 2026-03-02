@@ -26,10 +26,27 @@ export default async function LogoCategoryPaginated({ params }: { params: Promis
             const cat = categories[0];
             categoryName = cat.name;
             categoryDescription = cat.description || '';
-            const res = await fetchRESTWithMeta(`logo?logos=${cat.id}&per_page=${perPage}&page=${page}&_embed&_fields=id,title,slug,_links,_embedded`);
+
+            // Two-pass fetch: posts without _embed (fast), then batch media
+            const res = await fetchRESTWithMeta(`logo?logos=${cat.id}&per_page=${perPage}&page=${page}&_fields=id,title,slug,featured_media`);
             if (res && res.data) {
-                logos = res.data;
+                const rawLogos = res.data;
                 totalPages = res.totalPages;
+
+                const mediaIds = rawLogos.map((l: any) => l.featured_media).filter(Boolean);
+                const mediaList = mediaIds.length
+                    ? await fetchREST(`media?include=${mediaIds.join(',')}&_fields=id,source_url,alt_text&per_page=${perPage}`)
+                    : [];
+                const mediaMap = new Map((mediaList || []).map((m: any) => [m.id, m]));
+
+                logos = rawLogos.map((logo: any) => ({
+                    ...logo,
+                    _embedded: {
+                        'wp:featuredmedia': mediaMap.has(logo.featured_media)
+                            ? [mediaMap.get(logo.featured_media)]
+                            : []
+                    }
+                }));
             }
         }
     } catch (error) {

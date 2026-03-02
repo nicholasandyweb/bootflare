@@ -33,10 +33,28 @@ export default async function LogoCategory({ params }: { params: Promise<{ slug:
             const catId = categories[0].id;
             categoryName = categories[0].name;
             categoryDescription = categories[0].description || '';
-            const res = await fetchRESTWithMeta(`logo?logos=${catId}&per_page=${perPage}&page=${page}&_embed&_fields=id,title,slug,_links,_embedded`);
+
+            // Fetch posts without _embed — _embed on taxonomy-filtered queries takes 20s+
+            // on cold shared hosting. Two-pass (posts → batch media) is ~5s total.
+            const res = await fetchRESTWithMeta(`logo?logos=${catId}&per_page=${perPage}&page=${page}&_fields=id,title,slug,featured_media`);
             if (res && res.data) {
-                logos = res.data;
+                const rawLogos = res.data;
                 totalPages = res.totalPages;
+
+                const mediaIds = rawLogos.map((l: any) => l.featured_media).filter(Boolean);
+                const mediaList = mediaIds.length
+                    ? await fetchREST(`media?include=${mediaIds.join(',')}&_fields=id,source_url,alt_text&per_page=${perPage}`)
+                    : [];
+                const mediaMap = new Map((mediaList || []).map((m: any) => [m.id, m]));
+
+                logos = rawLogos.map((logo: any) => ({
+                    ...logo,
+                    _embedded: {
+                        'wp:featuredmedia': mediaMap.has(logo.featured_media)
+                            ? [mediaMap.get(logo.featured_media)]
+                            : []
+                    }
+                }));
             }
         }
     } catch (error) {
