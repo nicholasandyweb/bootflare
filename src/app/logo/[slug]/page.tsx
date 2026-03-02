@@ -38,7 +38,9 @@ interface LogoNode {
 
 async function getLogoBySlug(slug: string) {
     try {
-        const logos = await fetchREST(`logo?slug=${slug}&_embed&_fields=id,title,content,slug,excerpt,_links,_embedded`);
+        // retries=2 — logo detail is a primary page; tolerate a transient HTML challenge
+        // or 5xx from WP before declaring the logo missing.
+        const logos = await fetchREST(`logo?slug=${slug}&_embed&_fields=id,title,content,slug,excerpt,_links,_embedded`, 2);
         if (!logos || logos.length === 0) return null;
 
         const l = logos[0];
@@ -104,7 +106,10 @@ async function getRelatedLogos(logo: LogoNode) {
             ));
 
             if (relatedIds.length > 0) {
-                const crpLogos = await fetchREST(`logo?include=${relatedIds.join(',')}&_embed&per_page=${targetCount}&_fields=id,title,slug,_links,_embedded`);
+                const crpLogos = await fetchREST(
+                    `logo?include=${relatedIds.join(',')}&_embed&per_page=${targetCount}&_fields=id,title,slug,_links,_embedded`,
+                    2
+                );
                 if (crpLogos && Array.isArray(crpLogos)) {
                     relatedLogos = crpLogos.map((l: any) => ({
                         id: l.id,
@@ -123,7 +128,10 @@ async function getRelatedLogos(logo: LogoNode) {
             const catSlugs = logo.logoCategories?.nodes.map(n => n.slug) || [];
             const categoryFilter = catSlugs.length > 0 ? `&logos=${catSlugs[0]}` : '';
 
-            const fallbackResults = await fetchREST(`logo?per_page=${remaining}&exclude=${excludedIds.join(',')}${categoryFilter}&_embed&_fields=id,title,slug,_links,_embedded`);
+            const fallbackResults = await fetchREST(
+                `logo?per_page=${remaining}&exclude=${excludedIds.join(',')}${categoryFilter}&_embed&_fields=id,title,slug,_links,_embedded`,
+                2
+            );
 
             if (fallbackResults && Array.isArray(fallbackResults)) {
                 const fallbackLogos = fallbackResults.map((l: any) => ({

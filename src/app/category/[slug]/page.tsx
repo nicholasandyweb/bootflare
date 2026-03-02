@@ -29,7 +29,7 @@ interface RESTPost {
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
     const { slug } = await params;
     try {
-        const categories = await fetchREST(`categories?slug=${slug}&_fields=name,description`);
+        const categories = await fetchREST(`categories?slug=${slug}&_fields=name,description`, 2);
         if (categories && Array.isArray(categories) && categories.length > 0) {
             const cat = categories[0];
             return {
@@ -50,11 +50,23 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
     let errorOccurred = false;
 
     try {
-        const categories = await fetchREST(`categories?slug=${slug}&_fields=id,name,description,slug`);
-        if (categories && Array.isArray(categories) && categories.length > 0) {
+        const categories = await fetchREST(`categories?slug=${slug}&_fields=id,name,description,slug`, 2);
+        if (!categories) {
+            // WP REST returned null (timeout, HTML challenge, etc.) — treat as transient error,
+            // not as a missing category.
+            errorOccurred = true;
+        } else if (Array.isArray(categories) && categories.length > 0) {
             category = categories[0];
-            const postsData = await fetchREST(`posts?categories=${category!.id}&per_page=12&_embed&_fields=id,title,slug,excerpt,date,_links,_embedded`);
-            posts = Array.isArray(postsData) ? postsData : [];
+            const postsData = await fetchREST(
+                `posts?categories=${category!.id}&per_page=12&_embed&_fields=id,title,slug,excerpt,date,_links,_embedded`,
+                2
+            );
+
+            if (!postsData) {
+                errorOccurred = true;
+            } else {
+                posts = Array.isArray(postsData) ? postsData : [];
+            }
         }
     } catch (error) {
         console.error('Error fetching category posts:', error);
