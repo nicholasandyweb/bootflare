@@ -191,10 +191,17 @@ export default {
             'Accept': 'application/json',
         };
 
-        // Endpoints to pre-warm — these are the ones most likely to cause fallback on slow WP.
+        // Endpoints to pre-warm — keep these in sync with what pages actually fetch.
+        // A URL mismatch = cache miss = cold WP hit = potential timeout/fallback.
         const endpoints = [
+            // Blog list page
             'posts?per_page=8&_embed=wp:featuredmedia,wp:term&_fields=id,title,slug,excerpt,date,_links,_embedded',
+            // Main logos page + free-brand-logos (both use perPage=24)
             'logo?per_page=24&page=1&_embed&_fields=id,title,slug,_links,_embedded',
+            // Royalty-free music archive
+            'sr_playlist?per_page=12&page=1&_embed&_fields=id,title,slug,excerpt,_links,_embedded',
+            // CategoryList component (appears on all logo pages)
+            'logos?per_page=100&hide_empty=true&_fields=id,name,slug,count',
         ];
 
         for (const ep of endpoints) {

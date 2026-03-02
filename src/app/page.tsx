@@ -21,22 +21,24 @@ export default async function Home() {
   let musicImages: string[] = [];
 
   try {
-    const [logosData, musicData] = await Promise.all([
-      fetchREST('logo?per_page=20&_embed&_fields=id,_links,_embedded', 2),
-      fetchREST('sr_playlist?per_page=10&_embed&_fields=id,_links,_embedded', 2)
+    // Two-pass fetch: get IDs first (fast, no _embed joins), then batch-fetch media.
+    // _embed on these uncached endpoints takes 20s+ on cold WP — exceeds the 15s timeout.
+    const [logosRaw, musicRaw] = await Promise.all([
+      fetchREST('logo?per_page=20&_fields=id,featured_media', 2),
+      fetchREST('sr_playlist?per_page=10&_fields=id,featured_media', 2),
     ]);
 
-    if (logosData && Array.isArray(logosData)) {
-      logoImages = logosData
-        .map((item: any) => item._embedded?.['wp:featuredmedia']?.[0]?.source_url)
-        .filter((url): url is string => !!url);
-    }
+    const logoMediaIds = (logosRaw || []).map((l: any) => l.featured_media).filter(Boolean);
+    const musicMediaIds = (musicRaw || []).map((m: any) => m.featured_media).filter(Boolean);
+    const allMediaIds = [...logoMediaIds, ...musicMediaIds];
 
-    if (musicData && Array.isArray(musicData)) {
-      musicImages = musicData
-        .map((item: any) => item._embedded?.['wp:featuredmedia']?.[0]?.source_url)
-        .filter((url): url is string => !!url);
-    }
+    const mediaList = allMediaIds.length
+      ? await fetchREST(`media?include=${allMediaIds.join(',')}&_fields=id,source_url&per_page=30`, 1)
+      : [];
+    const mediaMap = new Map((mediaList || []).map((m: any) => [m.id, m.source_url as string]));
+
+    logoImages = logoMediaIds.map((id: number) => mediaMap.get(id)).filter((u): u is string => !!u);
+    musicImages = musicMediaIds.map((id: number) => mediaMap.get(id)).filter((u): u is string => !!u);
   } catch (error) {
     console.error('Error fetching homepage data:', error);
   }

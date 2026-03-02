@@ -20,6 +20,7 @@ export default function FreeBrandLogosPage() {
             route="/free-brand-logos"
             queryId="/free-brand-logos/"
             seoUrl="https://bootflare.com/free-brand-logos/"
+            perPage={24}
         />
     );
 }
