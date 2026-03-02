@@ -1,13 +1,5 @@
 const WP_URL = 'https://bootflare.com';
 
-// Cloudflare Workers fetch option — bypasses the router worker DNS record and
-// resolves bootflare.com directly to the WP shared-hosting origin.
-// Without this, every SSR subrequest to /wp-json/* loops back through the
-// router worker, which has a cold SWR cache that then has to wait for WP
-// (potentially rate-limited/slow), causing ALL pages to show fallback UI.
-// The `cf` key is a CF Workers-only init property; Node.js/undici silently ignores it.
-const WP_CF_OPTIONS = { resolveOverride: 'origin-wp.bootflare.com' };
-
 // Development-only in-memory cache to prevent "minutes of loading" during local testing
 const devCache = new Map<string, { data: any; timestamp: number }>();
 const CACHE_TTL = 10 * 60 * 1000; // 10 minutes
@@ -63,8 +55,6 @@ async function _doFetchREST(url: string, retries: number): Promise<any> {
                     'Accept': 'application/json',
                 },
                 signal: controller.signal,
-                // @ts-expect-error cf is a Cloudflare Workers-only fetch option; ignored in Node.js dev
-                cf: WP_CF_OPTIONS,
             });
             clearTimeout(timeoutId);
 
@@ -142,8 +132,6 @@ async function _doFetchRESTWithMeta(url: string, retries: number): Promise<any> 
                     'Accept': 'application/json',
                 },
                 signal: controller.signal,
-                // @ts-expect-error cf is a Cloudflare Workers-only fetch option; ignored in Node.js dev
-                cf: WP_CF_OPTIONS,
             });
             clearTimeout(timeoutId);
 
