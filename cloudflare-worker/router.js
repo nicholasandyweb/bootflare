@@ -65,7 +65,7 @@ const MAX_CONCURRENT_NEXTJS = 50; // Max in-flight requests to Next.js per isola
 // ── Stats (per-isolate, resets on cold start) ───────────────────────────
 const stats = { apiCacheHit: 0, apiCacheMiss: 0, pageCacheHit: 0, pageCacheMiss: 0, botBlocked: 0, totalRequests: 0 };
 
-const ROUTER_VERSION = '2026-03-02-swr-always';  // SSR always uses SWR cache; resolveOverride removed from Next.js
+const ROUTER_VERSION = '2026-03-02-flexible-ssl';  // CF Flexible SSL on origin-wp — https fetch, HTTP to origin
 
 // ── WP API cache settings ────────────────────────────────────────────────
 // "Fresh" window: serve from cache without revalidating (2 minutes)
@@ -74,7 +74,20 @@ const SWR_FRESH_MS = 2 * 60 * 1000;
 // On WP slowness/503, stale data is FAR better than an empty fallback page.
 const SWR_STORE_AGE_S = 24 * 60 * 60;
 
-const DEFAULT_WP_RESOLVE_OVERRIDE = 'origin-wp.bootflare.com';
+// Proxied CF subdomain for WP origin — orange cloud on, no Worker Route.
+// Fetching this host routes through CF CDN edge IPs → WP hosting,
+// avoiding Worker egress IPs which Imunify360 blocks from executing PHP.
+const WP_ORIGIN_HOST = 'origin-wp.bootflare.com';
+
+// Rewrites a bootflare.com WP URL to the proxied origin subdomain over HTTPS.
+// CF Configuration Rule for origin-wp.bootflare.com sets SSL=Flexible so CF
+// connects to origin via HTTP (port 80) internally — no origin cert required.
+function getWpTargetUrl(requestUrl) {
+    const target = new URL(requestUrl);
+    target.host = WP_ORIGIN_HOST;
+    target.protocol = 'https:';
+    return target.toString();
+}
 
 function clampSnippet(text, max = 300) {
     if (!text) return '';
@@ -88,55 +101,19 @@ function isStaticAssetPath(pathname) {
     return /\.(?:js|css|map|png|jpe?g|gif|webp|svg|ico|txt|xml|woff2?|ttf|eot)$/.test(pathname);
 }
 
-function getOriginUrlHost(env) {
-    if (!env?.ORIGIN_URL) return null;
-    try {
-        return new URL(env.ORIGIN_URL).host;
-    } catch {
-        return 'INVALID_ORIGIN_URL';
-    }
-}
 
-function getWpTargetUrl(requestUrl, env) {
-    const originHost = getOriginUrlHost(env);
-
-    // If ORIGIN_URL isn't set (or is invalid), don't rewrite.
-    if (!originHost || originHost === 'INVALID_ORIGIN_URL') return requestUrl;
-
-    // IMPORTANT: If ORIGIN_URL points at the resolveOverride hostname, do NOT use it.
-    // That forces SNI to origin-wp.bootflare.com and will typically fail TLS/vhost on shared hosting.
-    if (originHost === DEFAULT_WP_RESOLVE_OVERRIDE) return requestUrl;
-
-    // ORIGIN_URL should be a full URL like: https://your-hosting-provider.example
-    // It must have a valid TLS cert. We still send Host: bootflare.com for vhost routing.
-    const origin = new URL(env.ORIGIN_URL);
-    const target = new URL(requestUrl);
-    target.protocol = origin.protocol;
-    target.host = origin.host;
-    return target.toString();
-}
-
-function getWpCfOptions(env) {
-    const originHost = getOriginUrlHost(env);
-
-    // If ORIGIN_URL is provided (and isn't the resolveOverride hostname), do not use resolveOverride.
-    // We're already targeting the origin host.
-    if (originHost && originHost !== 'INVALID_ORIGIN_URL' && originHost !== DEFAULT_WP_RESOLVE_OVERRIDE) return undefined;
-    return { resolveOverride: DEFAULT_WP_RESOLVE_OVERRIDE };
-}
 
 /**
  * Background WP API cache refresh (stale-while-revalidate).
  * Fetches the URL fresh from WP and updates the cache if the response is valid JSON.
  * Called via ctx.waitUntil() so it never blocks the response path.
  */
-async function refreshWpApiCache(cacheKey, wpTargetUrl, wpHeaders, cfOptions, cache) {
+async function refreshWpApiCache(cacheKey, wpTargetUrl, wpHeaders, cache) {
     try {
         const res = await withTimeout(fetch(wpTargetUrl, {
             method: 'GET',
             headers: wpHeaders,
             redirect: 'manual',
-            cf: cfOptions,
         }), 12000);
 
         if (!res.ok) return;
@@ -213,7 +190,6 @@ export default {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
             'Accept': 'application/json',
         };
-        const cfOptions = getWpCfOptions(env);
 
         // Endpoints to pre-warm — these are the ones most likely to cause fallback on slow WP.
         const endpoints = [
@@ -224,7 +200,7 @@ export default {
         for (const ep of endpoints) {
             const publicUrl = `https://bootflare.com/wp-json/wp/v2/${ep}`;
             const cacheKey = new Request(publicUrl, { method: 'GET' });
-            const targetUrl = getWpTargetUrl(publicUrl, env);
+            const targetUrl = getWpTargetUrl(publicUrl);
 
             // Check if entry is already fresh — skip if so
             const existing = await cache.match(cacheKey);
@@ -234,7 +210,7 @@ export default {
             }
 
             // Fetch fresh from WP and update cache
-            ctx.waitUntil(refreshWpApiCache(cacheKey, targetUrl, wpHeaders, cfOptions, cache));
+            ctx.waitUntil(refreshWpApiCache(cacheKey, targetUrl, wpHeaders, cache));
         }
     },
 
@@ -244,13 +220,11 @@ export default {
 
         // ── Debug endpoint — visit bootflare.com/__debug to diagnose ─
         if (pathname === '/__debug') {
-            const originHost = getOriginUrlHost(env);
             return new Response(JSON.stringify({
                 router: 'active',
                 version: ROUTER_VERSION,
                 hasServiceBinding: !!env.NEXTJS_WORKER,
-                hasOriginUrl: !!env.ORIGIN_URL,
-                originHost,
+                wpOriginHost: WP_ORIGIN_HOST,
                 host: request.headers.get('Host'),
                 pathname,
                 url: request.url,
@@ -282,13 +256,12 @@ export default {
             }
 
             const started = Date.now();
-            const originHost = getOriginUrlHost(env);
             const results = {
                 router: 'active',
                 version: ROUTER_VERSION,
                 now: new Date().toISOString(),
-                wpMode: (originHost && originHost !== 'INVALID_ORIGIN_URL' && originHost !== DEFAULT_WP_RESOLVE_OVERRIDE) ? 'origin_url' : 'resolve_override',
-                originHost,
+                wpMode: 'proxied_subdomain',
+                wpOriginHost: WP_ORIGIN_HOST,
                 cf: {
                     colo: request.cf?.colo,
                     asn: request.cf?.asn,
@@ -344,10 +317,12 @@ export default {
             // WP JSON root probe (direct origin) — lightweight, just checks WP is alive
             try {
                 const t0 = Date.now();
-                const wpJsonUrl = getWpTargetUrl('https://bootflare.com/wp-json/', env);
+                const wpJsonUrl = getWpTargetUrl('https://bootflare.com/wp-json/');
                 const res = await withTimeout(fetch(wpJsonUrl, {
-                    headers: { 'User-Agent': 'bootflare-router-healthcheck' },
-                    cf: getWpCfOptions(env),
+                    headers: {
+                        'Host': 'bootflare.com',
+                        'User-Agent': 'bootflare-router-healthcheck',
+                    },
                 }), 12000);
                 const ct = res.headers.get('content-type') || '';
                 const body = await res.text();
@@ -359,14 +334,13 @@ export default {
             // WP REST posts probe — checks PHP execution is accessible (not just LiteSpeed cache)
             try {
                 const t0 = Date.now();
-                const wpPostsUrl = getWpTargetUrl('https://bootflare.com/wp-json/wp/v2/posts?per_page=1&_fields=id,slug', env);
+                const wpPostsUrl = getWpTargetUrl('https://bootflare.com/wp-json/wp/v2/posts?per_page=1&_fields=id,slug');
                 const res = await withTimeout(fetch(wpPostsUrl, {
                     headers: {
+                        'Host': 'bootflare.com',
                         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                         'Accept': 'application/json',
-                        'Host': 'bootflare.com',
                     },
-                    cf: getWpCfOptions(env),
                 }), 12000);
                 const ct = res.headers.get('content-type') || '';
                 const body = await res.text();
@@ -450,8 +424,8 @@ export default {
                         // Cache is stale — serve old data immediately and revalidate in background.
                         // This means pages NEVER show fallback content just because WP is temporarily slow.
                         if (request.method === 'GET') {
-                            const wpTargetUrl = getWpTargetUrl(request.url, env);
-                            ctx.waitUntil(refreshWpApiCache(cacheKey, wpTargetUrl, wpHeaders, getWpCfOptions(env), cache));
+                            const wpTargetUrl = getWpTargetUrl(request.url);
+                            ctx.waitUntil(refreshWpApiCache(cacheKey, wpTargetUrl, wpHeaders, cache));
                         }
 
                         const staleResponse = new Response(cachedResponse.body, cachedResponse);
@@ -467,15 +441,14 @@ export default {
                 }
             }
 
-            // IMPORTANT: Keep URL host as bootflare.com so TLS/SNI matches your existing cert,
-            // but route DNS to the real origin via resolveOverride.
-            const wpTargetUrl = getWpTargetUrl(request.url, env);
+            // Rewrite host to proxied CF subdomain — routes through CF CDN edge IPs → WP.
+            // Host header remains bootflare.com for WP vhost routing.
+            const wpTargetUrl = getWpTargetUrl(request.url);
             const response = await fetch(wpTargetUrl, {
                 method: request.method,
                 headers: wpHeaders,
                 body: ['GET', 'HEAD'].includes(request.method) ? null : request.body,
                 redirect: 'manual',
-                cf: getWpCfOptions(env),
             });
 
             // Cache successful API responses that return actual JSON (not HTML bot challenges)
@@ -484,8 +457,6 @@ export default {
 
             if (isApi && response.ok && isJson && request.method === 'GET') {
                 try {
-                    // Clone body to inspect content — don't cache empty arrays/objects
-                    // (WP returns [] under load; caching that poisons the site)
                     const bodyText = await response.clone().text();
                     const isSubstantial = bodyText.length > 10; // more than [] or {}
 
