@@ -1,4 +1,5 @@
-const WP_URL = 'https://bootflare.com';
+const WP_URL = 'https://origin-wp.bootflare.com'; // Use origin-wp to bypass Worker loop
+const WP_HOST = 'bootflare.com';
 
 // Development-only in-memory cache to prevent "minutes of loading" during local testing
 const devCache = new Map<string, { data: any; timestamp: number }>();
@@ -51,6 +52,9 @@ async function _doFetchREST(url: string, retries: number): Promise<any> {
         try {
             const res = await fetch(url, {
                 headers: {
+                    'Host': WP_HOST,
+                    'X-Forwarded-Host': 'bootflare.com',
+                    'X-Forwarded-Proto': 'https',
                     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                     'Accept': 'application/json',
                 },
@@ -128,6 +132,9 @@ async function _doFetchRESTWithMeta(url: string, retries: number): Promise<any> 
         try {
             const res = await fetch(url, {
                 headers: {
+                    'Host': WP_HOST,
+                    'X-Forwarded-Host': 'bootflare.com',
+                    'X-Forwarded-Proto': 'https',
                     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                     'Accept': 'application/json',
                 },
