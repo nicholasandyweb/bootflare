@@ -1,10 +1,5 @@
 const WP_URL = 'https://bootflare.com';
 
-// Cloudflare Workers fetch option — bypasses the router worker DNS record so that
-// Next.js SSR REST fetches go directly to the WP origin without looping through
-// the router. The `cf` key is a CF Workers-only init property; ignored in Node.js dev.
-const WP_CF_OPTIONS = { resolveOverride: 'origin-wp.bootflare.com' };
-
 // Development-only in-memory cache to prevent "minutes of loading" during local testing
 const devCache = new Map<string, { data: any; timestamp: number }>();
 const CACHE_TTL = 10 * 60 * 1000; // 10 minutes
@@ -60,8 +55,6 @@ async function _doFetchREST(url: string, retries: number): Promise<any> {
                     'Accept': 'application/json',
                 },
                 signal: controller.signal,
-                // @ts-expect-error cf is a Cloudflare Workers-only fetch option; ignored in Node.js dev
-                cf: WP_CF_OPTIONS,
             });
             clearTimeout(timeoutId);
 
@@ -139,8 +132,6 @@ async function _doFetchRESTWithMeta(url: string, retries: number): Promise<any> 
                     'Accept': 'application/json',
                 },
                 signal: controller.signal,
-                // @ts-expect-error cf is a Cloudflare Workers-only fetch option; ignored in Node.js dev
-                cf: WP_CF_OPTIONS,
             });
             clearTimeout(timeoutId);
 

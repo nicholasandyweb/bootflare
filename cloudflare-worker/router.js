@@ -65,7 +65,7 @@ const MAX_CONCURRENT_NEXTJS = 50; // Max in-flight requests to Next.js per isola
 // ── Stats (per-isolate, resets on cold start) ───────────────────────────
 const stats = { apiCacheHit: 0, apiCacheMiss: 0, pageCacheHit: 0, pageCacheMiss: 0, botBlocked: 0, totalRequests: 0 };
 
-const ROUTER_VERSION = '2026-03-01-no-rest-override';
+const ROUTER_VERSION = '2026-03-02-swr-always';  // SSR always uses SWR cache; resolveOverride removed from Next.js
 
 // ── WP API cache settings ────────────────────────────────────────────────
 // "Fresh" window: serve from cache without revalidating (2 minutes)
@@ -296,6 +296,7 @@ export default {
                 },
                 nextjs: null,
                 wpJson: null,
+                wpPosts: null,
                 msTotal: 0,
             };
 
@@ -355,6 +356,25 @@ export default {
                 results.wpJson = { error: e?.message || String(e) };
             }
 
+            // WP REST posts probe — checks PHP execution is accessible (not just LiteSpeed cache)
+            try {
+                const t0 = Date.now();
+                const wpPostsUrl = getWpTargetUrl('https://bootflare.com/wp-json/wp/v2/posts?per_page=1&_fields=id,slug', env);
+                const res = await withTimeout(fetch(wpPostsUrl, {
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                        'Accept': 'application/json',
+                        'Host': 'bootflare.com',
+                    },
+                    cf: getWpCfOptions(env),
+                }), 12000);
+                const ct = res.headers.get('content-type') || '';
+                const body = await res.text();
+                results.wpPosts = { url: wpPostsUrl, status: res.status, ms: Date.now() - t0, contentType: ct, snippet: clampSnippet(body, 150) };
+            } catch (e) {
+                results.wpPosts = { error: e?.message || String(e) };
+            }
+
             results.msTotal = Date.now() - started;
 
             const body = JSON.stringify(results, null, 2);
@@ -409,13 +429,7 @@ export default {
             const cache = caches.default;
             let cacheKey = request;
 
-            // For WP REST endpoints, honour the requester's Cache-Control so that
-            // Next.js SSR subrequests (which send `cache: 'no-store'`) always get
-            // a fresh response and never receive a stale/empty cached payload.
-            const reqCacheControl = (request.headers.get('Cache-Control') || '').toLowerCase();
-            const bypassApiCache = reqCacheControl.includes('no-store') || reqCacheControl.includes('no-cache');
-
-            if (isApi && !bypassApiCache && request.method === 'GET') {
+            if (isApi && request.method === 'GET') {
                 try {
                     // GET requests: use URL only, strip varying headers
                     cacheKey = new Request(request.url, { method: 'GET' });
@@ -468,7 +482,7 @@ export default {
             const contentType = response.headers.get('content-type') || '';
             const isJson = contentType.includes('application/json');
 
-            if (isApi && !bypassApiCache && response.ok && isJson && request.method === 'GET') {
+            if (isApi && response.ok && isJson && request.method === 'GET') {
                 try {
                     // Clone body to inspect content — don't cache empty arrays/objects
                     // (WP returns [] under load; caching that poisons the site)
