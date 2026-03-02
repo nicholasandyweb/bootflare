@@ -35,14 +35,32 @@ export default async function LogosTemplate({
     const pageSlug = queryId.replace(/\//g, '') || 'logos';
 
     const [logosResult, pageResult, seoResult] = await Promise.allSettled([
-        fetchRESTWithMeta(`logo?per_page=${perPage}&page=${page}&_embed&_fields=id,title,slug,_links,_embedded`),
+        // Two-pass fetch: logo list without _embed (fast), then batch media.
+        // _embed on uncached shared-hosting endpoints can exceed the 15s timeout,
+        // which would cause empty data and fallback UIs.
+        fetchRESTWithMeta(`logo?per_page=${perPage}&page=${page}&_fields=id,title,slug,featured_media`),
         fetchREST(`pages?slug=${pageSlug}&_fields=title,excerpt`),
         fetchRankMathSEO(seoUrl),
     ]);
 
     if (logosResult.status === 'fulfilled' && logosResult.value?.data) {
-        logos = Array.isArray(logosResult.value.data) ? logosResult.value.data : [];
+        const rawLogos = Array.isArray(logosResult.value.data) ? logosResult.value.data : [];
         totalPages = logosResult.value.totalPages || 1;
+
+        const mediaIds = rawLogos.map((l: any) => l.featured_media).filter(Boolean);
+        const mediaList = mediaIds.length
+            ? await fetchREST(`media?include=${mediaIds.join(',')}&_fields=id,source_url,alt_text&per_page=${perPage}`)
+            : [];
+        const mediaMap = new Map((mediaList || []).map((m: any) => [m.id, m]));
+
+        logos = rawLogos.map((logo: any) => ({
+            ...logo,
+            _embedded: {
+                'wp:featuredmedia': mediaMap.has(logo.featured_media)
+                    ? [mediaMap.get(logo.featured_media)]
+                    : [],
+            },
+        }));
     }
 
     if (pageResult.status === 'fulfilled' && Array.isArray(pageResult.value) && pageResult.value.length > 0) {

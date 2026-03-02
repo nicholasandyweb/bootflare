@@ -196,8 +196,8 @@ export default {
         const endpoints = [
             // Blog list page
             'posts?per_page=8&_embed=wp:featuredmedia,wp:term&_fields=id,title,slug,excerpt,date,_links,_embedded',
-            // Main logos page + free-brand-logos (both use perPage=24)
-            'logo?per_page=24&page=1&_embed&_fields=id,title,slug,_links,_embedded',
+            // Main logos page + free-brand-logos (both use two-pass fetch with featured_media)
+            'logo?per_page=24&page=1&_fields=id,title,slug,featured_media',
             // Royalty-free music archive
             'sr_playlist?per_page=12&page=1&_embed&_fields=id,title,slug,excerpt,_links,_embedded',
             // CategoryList component (appears on all logo pages)
